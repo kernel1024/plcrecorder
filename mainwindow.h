@@ -58,9 +58,6 @@ public slots:
     void aboutMsg();
     void aboutQtMsg();
     void variablesCtxMenu(QPoint pos);
-    void addNewVariable();
-    void deleteVariable();
-    void deleteAllVariables();
     void setupOutputSettings();
     void setupTimeouts();
     void loadSettings();
@@ -74,6 +71,15 @@ public slots:
     void ctlStop();
 
     void sysSIGPIPE();
+
+signals:
+    void plcSetAddress(const QString& Ip, int Rack, int Slot, int Timeout);
+    void plcSetRetryParams(int maxErrorCnt, int maxRetryCnt, int waitReconnect);
+    void plcConnect();
+    void plcStart();
+    void plcDisconnect();
+    void plcCorrectToThread();
+
 };
 
 #endif // MAINWINDOW_H

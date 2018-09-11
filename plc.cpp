@@ -253,9 +253,9 @@ void CPLC::correctToThread()
     resClock->setInterval(120*60*1000); // 2 min for reset accumulated record errors
     infClock->setInterval(2000);
 
-    connect(mainClock,SIGNAL(timeout()),this,SLOT(plcClock()));
-    connect(resClock,SIGNAL(timeout()),this,SLOT(resetClock()));
-    connect(infClock,SIGNAL(timeout()),this,SLOT(infoClock()));
+    connect(mainClock,&QTimer::timeout,this,&CPLC::plcClock);
+    connect(resClock,&QTimer::timeout,this,&CPLC::resetClock);
+    connect(infClock,&QTimer::timeout,this,&CPLC::infoClock);
 
     resClock->start();
     infClock->start();

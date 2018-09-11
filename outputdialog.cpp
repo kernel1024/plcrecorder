@@ -10,7 +10,7 @@ COutputDialog::COutputDialog(QWidget *parent) :
     ui(new Ui::COutputDialog)
 {
     ui->setupUi(this);
-    connect(ui->btnCSVDir,SIGNAL(clicked()),this,SLOT(selectDirDlg()));
+    connect(ui->btnCSVDir,&QPushButton::clicked,this,&COutputDialog::selectDirDlg);
 }
 
 COutputDialog::~COutputDialog()
