@@ -95,6 +95,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->tableVariables,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(variablesCtxMenu(QPoint)));
 
+    connect(vtmodel,&CVarModel::syncPLCtoModel,plc,&CPLC::plcSetWatchpoints);
+
     QTimer* syncTimer = new QTimer(this);
     syncTimer->setInterval(60000);
     connect(syncTimer,SIGNAL(timeout()),this,SLOT(csvSync()));
@@ -293,6 +295,7 @@ void MainWindow::plcVariablesUpdatedConsistent(const CWPList &wp, const QDateTim
 
 void MainWindow::connectPLC()
 {
+    vtmodel->syncPLC();
     QMetaObject::invokeMethod(plc,"plcSetRetryParams",Qt::QueuedConnection,
                               Q_ARG(int,gSet->tmMaxRecErrorCount),
                               Q_ARG(int,gSet->tmMaxConnectRetryCount),

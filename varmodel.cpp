@@ -63,17 +63,17 @@ void CVarDelegate::setModelData(QWidget *editor, QAbstractItemModel *, const QMo
 
     if ((index.column()==0) && (le!=nullptr)) {
         vmodel->wp[index.row()].label=le->text();
-        vmodel->syncPLCtoModel();
+        vmodel->syncPLC();
     } else if ((index.column()==1) && (le!=nullptr)) {
         if (!gSet->plcParseAddr(le->text(),vmodel->wp[index.row()]))
             QMessageBox::warning(vmodel->mainWnd,trUtf8("PLC recorder error"),
                                  trUtf8("Unable to parse address. Possible syntax error."));
-        vmodel->syncPLCtoModel();
+        vmodel->syncPLC();
     } else if ((index.column()==2) && (cb!=nullptr)) {
         if (!gSet->plcSetTypeForName(cb->currentText(),vmodel->wp[index.row()]))
             QMessageBox::warning(vmodel->mainWnd,trUtf8("PLC recorder error"),
                                  trUtf8("Unable to parse type. Possible syntax error."));
-        vmodel->syncPLCtoModel();
+        vmodel->syncPLC();
     }
 }
 
@@ -229,12 +229,6 @@ int CVarModel::getCWPCount() const
     return wp.count();
 }
 
-void CVarModel::syncPLCtoModel()
-{
-    if (plc!=nullptr)
-        QMetaObject::invokeMethod(plc,"plcSetWatchpoints",Qt::QueuedConnection,Q_ARG(CWPList, wp));
-}
-
 void CVarModel::saveWPList(QDataStream &out)
 {
     out << static_cast<int>(wp.count());
@@ -250,7 +244,7 @@ void CVarModel::loadWPList(QDataStream &in)
     beginInsertRows(QModelIndex(),0,cnt-1);
     in >> wp;
     endInsertRows();
-    syncPLCtoModel();
+    syncPLC();
 }
 
 void CVarModel::loadActualsFromPLC(const CWPList &wpl)
@@ -275,4 +269,9 @@ void CVarModel::setEditEnabled(bool state)
 bool CVarModel::isEditEnabled()
 {
     return editEnabled;
+}
+
+void CVarModel::syncPLC()
+{
+    emit syncPLCtoModel(wp);
 }

@@ -58,8 +58,6 @@ public:
     CWP getCWP(int idx) const;
     int getCWPCount() const;
 
-    void syncPLCtoModel();
-
     void saveWPList(QDataStream& out);
     void loadWPList(QDataStream &in);
 
@@ -73,6 +71,12 @@ private:
     CPLC *plc;
     QPixmap led0, led1;
     bool editEnabled;
+
+signals:
+    void syncPLCtoModel(const CWPList& aWatchpoints);
+
+public slots:
+    void syncPLC();
 
 };
 
