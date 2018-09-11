@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="led0">img/led0.png</file>
+        <file alias="led1">img/led1.png</file>
+        <file alias="icon32">img/icon32.png</file>
+        <file alias="delete">img/delete.png</file>
+        <file alias="new">img/new.png</file>
+        <file alias="open">img/open.png</file>
+        <file alias="reload">img/reload.png</file>
+        <file alias="save">img/save.png</file>
+        <file alias="icon40">img/icon40.png</file>
+    </qresource>
+</RCC>

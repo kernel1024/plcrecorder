@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>779</width>
+    <height>572</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>PLC recorder</string>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <layout class="QVBoxLayout" name="verticalLayout_6" stretch="1,15,1">
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QGroupBox" name="groupBox">
+        <property name="title">
+         <string>PLC connection via Ethernet</string>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout">
+           <item>
+            <widget class="QLabel" name="label">
+             <property name="text">
+              <string>IP address</string>
+             </property>
+             <property name="buddy">
+              <cstring>editIP</cstring>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="editIP">
+             <property name="inputMask">
+              <string>000.000.000.000; </string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout_2">
+           <item>
+            <widget class="QLabel" name="label_2">
+             <property name="text">
+              <string>Rack</string>
+             </property>
+             <property name="buddy">
+              <cstring>editRack</cstring>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QSpinBox" name="editRack">
+             <property name="value">
+              <number>0</number>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout_3">
+           <item>
+            <widget class="QLabel" name="label_3">
+             <property name="text">
+              <string>Slot</string>
+             </property>
+             <property name="buddy">
+              <cstring>editSlot</cstring>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QSpinBox" name="editSlot">
+             <property name="value">
+              <number>3</number>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_2">
+        <property name="title">
+         <string>PLC polling</string>
+        </property>
+        <layout class="QFormLayout" name="formLayout">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_4">
+           <property name="text">
+            <string>Polling interval (ms)</string>
+           </property>
+           <property name="buddy">
+            <cstring>editAcqInterval</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QSpinBox" name="editAcqInterval">
+           <property name="minimum">
+            <number>50</number>
+           </property>
+           <property name="maximum">
+            <number>99999999</number>
+           </property>
+           <property name="singleStep">
+            <number>50</number>
+           </property>
+           <property name="value">
+            <number>200</number>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_5">
+           <property name="text">
+            <string>Actual interval (ms)</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLabel" name="lblActualAcqInterval">
+           <property name="text">
+            <string>0</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_4">
+        <item>
+         <widget class="QPushButton" name="btnConnect">
+          <property name="text">
+           <string>Connect</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnDisconnect">
+          <property name="text">
+           <string>Disconnect</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="CTableView" name="tableVariables">
+      <property name="contextMenuPolicy">
+       <enum>Qt::CustomContextMenu</enum>
+      </property>
+      <property name="selectionMode">
+       <enum>QAbstractItemView::ExtendedSelection</enum>
+      </property>
+      <attribute name="horizontalHeaderDefaultSectionSize">
+       <number>175</number>
+      </attribute>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <item>
+       <widget class="QPlainTextEdit" name="textLog"/>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_5">
+        <item>
+         <widget class="QPushButton" name="btnClearLog">
+          <property name="text">
+           <string>Clear</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>779</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionLoadSettings"/>
+    <addaction name="actionSaveSettings"/>
+    <addaction name="separator"/>
+    <addaction name="actionTimeouts"/>
+    <addaction name="actionCSVSettings"/>
+    <addaction name="separator"/>
+    <addaction name="actionQuit"/>
+   </widget>
+   <widget class="QMenu" name="menu_2">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionForceRotateCSV"/>
+   </widget>
+   <widget class="QMenu" name="menu_3">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionAbout"/>
+    <addaction name="actionAboutQt"/>
+   </widget>
+   <addaction name="menu"/>
+   <addaction name="menu_2"/>
+   <addaction name="menu_3"/>
+  </widget>
+  <action name="actionLoadSettings">
+   <property name="icon">
+    <iconset resource="plcrecorder.qrc">
+     <normaloff>:/open</normaloff>:/open</iconset>
+   </property>
+   <property name="text">
+    <string>Load settings...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="actionSaveSettings">
+   <property name="icon">
+    <iconset resource="plcrecorder.qrc">
+     <normaloff>:/save</normaloff>:/save</iconset>
+   </property>
+   <property name="text">
+    <string>Save settings...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionQuit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="actionCSVSettings">
+   <property name="text">
+    <string>Save CSV...</string>
+   </property>
+  </action>
+  <action name="actionForceRotateCSV">
+   <property name="icon">
+    <iconset resource="plcrecorder.qrc">
+     <normaloff>:/reload</normaloff>:/reload</iconset>
+   </property>
+   <property name="text">
+    <string>Force CSV rotation</string>
+   </property>
+  </action>
+  <action name="actionTimeouts">
+   <property name="text">
+    <string>Timeouts...</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About...</string>
+   </property>
+  </action>
+  <action name="actionAboutQt">
+   <property name="text">
+    <string>About Qt...</string>
+   </property>
+  </action>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <customwidgets>
+  <customwidget>
+   <class>CTableView</class>
+   <extends>QTableView</extends>
+   <header>specwidgets.h</header>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>editIP</tabstop>
+  <tabstop>editRack</tabstop>
+  <tabstop>editSlot</tabstop>
+  <tabstop>editAcqInterval</tabstop>
+  <tabstop>btnConnect</tabstop>
+  <tabstop>btnDisconnect</tabstop>
+  <tabstop>tableVariables</tabstop>
+  <tabstop>textLog</tabstop>
+ </tabstops>
+ <resources>
+  <include location="plcrecorder.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>actionQuit</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>389</x>
+     <y>285</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>btnClearLog</sender>
+   <signal>clicked()</signal>
+   <receiver>textLog</receiver>
+   <slot>clear()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>701</x>
+     <y>473</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>654</x>
+     <y>473</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
