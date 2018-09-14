@@ -57,6 +57,7 @@ public:
 
     CWP getCWP(int idx) const;
     int getCWPCount() const;
+    CWPList getCWPList() const;
 
     void saveWPList(QDataStream& out);
     void loadWPList(QDataStream &in);

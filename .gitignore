@@ -21,6 +21,7 @@ Release/
 *.log
 *.autosave
 .*.stash
+moc_*
 
 # QtCreator project files
 *.pro.user
@@ -29,10 +30,4 @@ Release/
 *~
 
 # Project specific
-qjrad
-qjrad_*.pro
-dictionary_adaptor.*
-kanjidic.rcc
-kanjiconv/kanjicnv
-kanjiconv/out
-goldendict
+plcrecorder

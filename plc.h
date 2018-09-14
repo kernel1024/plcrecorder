@@ -7,11 +7,7 @@
 #include <QVariant>
 #include <QUuid>
 #include <QList>
-#include <QMutex>
-#include <QTimer>
 #include <QTime>
-#include "libnodave/nodave.h"
-#include "libnodave/openSocket.h"
 
 class CVarModel;
 
@@ -23,13 +19,13 @@ public:
     friend class CVarModel;
     enum VArea {
         NoArea = -1,
-        Inputs = daveInputs,
-        Outputs = daveOutputs,
-        Merkers = daveFlags,
-        DB = daveDB,
-        IDB = daveDI,
-        Counters = daveCounter,
-        Timers = daveTimer
+        Inputs = 0x81,
+        Outputs = 0x82,
+        Merkers = 0x83,
+        DB = 0x84,
+        IDB = 0x85,
+        Counters = 28,
+        Timers = 29
     };
     enum VType {
         S7NoType,
@@ -86,6 +82,7 @@ private:
     CWPList* wlist;
 };
 
+class CPLCPrivate;
 
 class CPLC : public QObject
 {
@@ -100,34 +97,7 @@ public:
     virtual ~CPLC();
 
 private:
-    QString ip;
-    int rack;
-    int slot;
-    int netTimeout;
-    _daveOSserialType fds;
-    PlcState state;
-
-    daveInterface* daveIntf;
-    daveConnection* daveConn;
-
-    QMutex clockInterlock;
-    int skippedTicks;
-    int recErrorsCount;
-    QTimer* mainClock;
-    QTimer* resClock;
-    QTimer* infClock;
-    int updateInterval;
-    QTime updateClock;
-
-    int tmMaxRecErrorCount;
-    int tmMaxConnectRetryCount;
-    int tmWaitReconnect;
-
-    CWPList wp;
-
-    QList<CPairing> pairings;
-
-    bool rearrangeWatchpoints();
+    CPLCPrivate* dptr;
 
 signals:
     void plcError(const QString& msg);
@@ -154,8 +124,6 @@ public slots:
 
 private slots:
     void plcClock();
-    void resetClock();
-    void infoClock();
     
 };
 

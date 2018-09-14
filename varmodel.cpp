@@ -229,6 +229,11 @@ int CVarModel::getCWPCount() const
     return wp.count();
 }
 
+CWPList CVarModel::getCWPList() const
+{
+    return wp;
+}
+
 void CVarModel::saveWPList(QDataStream &out)
 {
     out << static_cast<int>(wp.count());

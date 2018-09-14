@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui widgets
+QT       += core gui widgets printsupport
 
 TARGET = plcrecorder
 TEMPLATE = app
@@ -21,7 +21,9 @@ SOURCES += libnodave/nodave.c \
     global.cpp \
     outputdialog.cpp \
     specwidgets.cpp \
-    timeoutsdialog.cpp
+    timeoutsdialog.cpp \
+    qcustomplot-source/qcustomplot.cpp \
+    graphform.cpp
 
 HEADERS  += mainwindow.h \
     libnodave/log2.h \
@@ -33,11 +35,15 @@ HEADERS  += mainwindow.h \
     global.h \
     outputdialog.h \
     specwidgets.h \
-    timeoutsdialog.h
+    timeoutsdialog.h \
+    qcustomplot-source/qcustomplot.h \
+    graphform.h \
+    plc_p.h
 
 FORMS    += mainwindow.ui \
     outputdialog.ui \
-    timeoutsdialog.ui
+    timeoutsdialog.ui \
+    graphform.ui
 
 RESOURCES += \
     plcrecorder.qrc

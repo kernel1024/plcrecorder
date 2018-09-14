@@ -28,7 +28,7 @@
            <item>
             <widget class="QLabel" name="label">
              <property name="text">
-              <string>IP address</string>
+              <string>&amp;IP address</string>
              </property>
              <property name="buddy">
               <cstring>editIP</cstring>
@@ -38,7 +38,7 @@
            <item>
             <widget class="QLineEdit" name="editIP">
              <property name="inputMask">
-              <string>000.000.000.000; </string>
+              <string>000.000.000.000</string>
              </property>
             </widget>
            </item>
@@ -49,7 +49,7 @@
            <item>
             <widget class="QLabel" name="label_2">
              <property name="text">
-              <string>Rack</string>
+              <string>&amp;Rack</string>
              </property>
              <property name="buddy">
               <cstring>editRack</cstring>
@@ -70,7 +70,7 @@
            <item>
             <widget class="QLabel" name="label_3">
              <property name="text">
-              <string>Slot</string>
+              <string>&amp;Slot</string>
              </property>
              <property name="buddy">
               <cstring>editSlot</cstring>
@@ -98,7 +98,7 @@
          <item row="0" column="0">
           <widget class="QLabel" name="label_4">
            <property name="text">
-            <string>Polling interval (ms)</string>
+            <string>&amp;Polling interval (ms)</string>
            </property>
            <property name="buddy">
             <cstring>editAcqInterval</cstring>
@@ -108,13 +108,13 @@
          <item row="0" column="1">
           <widget class="QSpinBox" name="editAcqInterval">
            <property name="minimum">
-            <number>50</number>
+            <number>10</number>
            </property>
            <property name="maximum">
             <number>99999999</number>
            </property>
            <property name="singleStep">
-            <number>50</number>
+            <number>1</number>
            </property>
            <property name="value">
             <number>200</number>
@@ -211,12 +211,12 @@
      <x>0</x>
      <y>0</y>
      <width>779</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
     <property name="title">
-     <string>File</string>
+     <string>&amp;File</string>
     </property>
     <addaction name="actionLoadSettings"/>
     <addaction name="actionSaveSettings"/>
@@ -228,13 +228,13 @@
    </widget>
    <widget class="QMenu" name="menu_2">
     <property name="title">
-     <string>Tools</string>
+     <string>&amp;Tools</string>
     </property>
     <addaction name="actionForceRotateCSV"/>
    </widget>
    <widget class="QMenu" name="menu_3">
     <property name="title">
-     <string>Help</string>
+     <string>&amp;Help</string>
     </property>
     <addaction name="actionAbout"/>
     <addaction name="actionAboutQt"/>
@@ -249,7 +249,7 @@
      <normaloff>:/open</normaloff>:/open</iconset>
    </property>
    <property name="text">
-    <string>Load settings...</string>
+    <string>&amp;Load settings...</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
@@ -261,7 +261,7 @@
      <normaloff>:/save</normaloff>:/save</iconset>
    </property>
    <property name="text">
-    <string>Save settings...</string>
+    <string>&amp;Save settings...</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
@@ -269,7 +269,7 @@
   </action>
   <action name="actionQuit">
    <property name="text">
-    <string>Exit</string>
+    <string>&amp;Exit</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Q</string>
@@ -277,7 +277,7 @@
   </action>
   <action name="actionCSVSettings">
    <property name="text">
-    <string>Save CSV...</string>
+    <string>Save &amp;CSV...</string>
    </property>
   </action>
   <action name="actionForceRotateCSV">
@@ -286,22 +286,22 @@
      <normaloff>:/reload</normaloff>:/reload</iconset>
    </property>
    <property name="text">
-    <string>Force CSV rotation</string>
+    <string>&amp;Force CSV rotation</string>
    </property>
   </action>
   <action name="actionTimeouts">
    <property name="text">
-    <string>Timeouts...</string>
+    <string>&amp;Timeouts...</string>
    </property>
   </action>
   <action name="actionAbout">
    <property name="text">
-    <string>About...</string>
+    <string>&amp;About...</string>
    </property>
   </action>
   <action name="actionAboutQt">
    <property name="text">
-    <string>About Qt...</string>
+    <string>About &amp;Qt...</string>
    </property>
   </action>
  </widget>

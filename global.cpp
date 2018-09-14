@@ -8,11 +8,13 @@ CGlobal::CGlobal(QObject *parent) :
     outputFileTemplate = QString();
     tmTCPTimeout = 5000000;
     tmMaxRecErrorCount = 50;
+    plotVerticalSize = 100;
     tmMaxConnectRetryCount = 1;
     tmWaitReconnect = 2;
     tmTotalRetryCount = 1;
     suppressMsgBox = false;
     restoreCSV = false;
+    // TODO: save CSV settings, configure plot size, add help for CSV template
 }
 
 QString CGlobal::plcGetAddrName(const CWP& aWp) {

@@ -7,6 +7,7 @@
 #include <QString>
 #include <QTextStream>
 #include "plc.h"
+#include "graphform.h"
 
 class CVarModel;
 class CVarDelegate;
@@ -21,10 +22,10 @@ class MainWindow : public QMainWindow
     
 public:
     CPLC* plc;
+    CGraphForm* graph;
 
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-    void appendLog(const QString& msg);
     
 private:
     Ui::MainWindow *ui;
@@ -32,6 +33,7 @@ private:
     CVarDelegate *vtdelegate;
     QCheckBox* cbVat;
     QCheckBox* cbRec;
+    QCheckBox* cbPlot;
     QThread* plcThread;
     QLabel* lblState;
     QLabel* lblScanTime;
@@ -67,10 +69,17 @@ public slots:
     void csvSync();
     void csvStopClose();
 
+    void plotControl();
+    void plotStop();
+
+    void vatControl();
+
     void ctlAggregatedStart();
     void ctlStop();
 
     void sysSIGPIPE();
+
+    void appendLog(const QString& msg);
 
 signals:
     void plcSetAddress(const QString& Ip, int Rack, int Slot, int Timeout);

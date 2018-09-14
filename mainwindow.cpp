@@ -37,6 +37,8 @@ MainWindow::MainWindow(QWidget *parent) :
     lblState = new QLabel(trUtf8("Offline"));
     cbVat = new QCheckBox(trUtf8("Online VAT"));
     cbRec = new QCheckBox(trUtf8("CSV recording"));
+    cbPlot = new QCheckBox(trUtf8("Time graph"));
+    ui->statusBar->addPermanentWidget(cbPlot);
     ui->statusBar->addPermanentWidget(cbRec);
     ui->statusBar->addPermanentWidget(cbVat);
     ui->statusBar->addPermanentWidget(lblState);
@@ -49,7 +51,10 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionAbout,&QAction::triggered,this,&MainWindow::aboutMsg);
     connect(ui->actionAboutQt,&QAction::triggered,this,&MainWindow::aboutQtMsg);
     connect(ui->tableVariables,&CTableView:: ctxMenuRequested,this,&MainWindow::variablesCtxMenu);
+
+    connect(cbVat,&QCheckBox::clicked,this,&MainWindow::vatControl);
     connect(cbRec,&QCheckBox::clicked,this,&MainWindow::csvCaptureControl);
+    connect(cbPlot,&QCheckBox::clicked,this,&MainWindow::plotControl);
 
     plc = new CPLC();
     plcThread = new QThread();
@@ -71,12 +76,18 @@ MainWindow::MainWindow(QWidget *parent) :
     cbVat->setChecked(false);
     cbRec->setEnabled(false);
     cbRec->setChecked(false);
+    cbPlot->setEnabled(false);
+    cbPlot->setChecked(false);
 
     plc->moveToThread(plcThread);
     plcThread->start();
 
     connect(this,&MainWindow::plcCorrectToThread,plc,&CPLC::correctToThread,Qt::QueuedConnection);
     emit plcCorrectToThread();
+
+    graph = new CGraphForm(this);
+    graph->setWindowFlag(Qt::Window,true);
+    graph->hide();
 
     connect(ui->btnConnect,&QPushButton::clicked,this,&MainWindow::ctlAggregatedStart);
     connect(ui->btnDisconnect,&QPushButton::clicked,this,&MainWindow::ctlStop);
@@ -94,6 +105,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(plc,&CPLC::plcScanTime,ui->lblActualAcqInterval,&QLabel::setText,Qt::QueuedConnection);
 
     connect(ui->tableVariables,&CTableView::customContextMenuRequested,this,&MainWindow::variablesCtxMenu);
+    connect(graph,&CGraphForm::logMessage,this,&MainWindow::appendLog);
+    connect(graph,&CGraphForm::stopGraph,this,&MainWindow::plotStop);
 
     connect(vtmodel,&CVarModel::syncPLCtoModel,plc,&CPLC::plcSetWatchpoints);
     connect(this,&MainWindow::plcSetAddress,plc,&CPLC::plcSetAddress);
@@ -181,6 +194,9 @@ void MainWindow::plcConnected()
     cbRec->setEnabled(false);
     cbRec->setChecked(false);
     cbRec->setStyleSheet(QString());
+    cbPlot->setEnabled(false);
+    cbPlot->setChecked(false);
+    cbPlot->setStyleSheet(QString());
 
     ui->actionLoadSettings->setEnabled(false);
 
@@ -201,6 +217,9 @@ void MainWindow::plcDisconnected()
     cbRec->setEnabled(false);
     cbRec->setChecked(false);
     cbRec->setStyleSheet(QString());
+    cbPlot->setEnabled(false);
+    cbPlot->setChecked(false);
+    cbPlot->setStyleSheet(QString());
 
     ui->actionLoadSettings->setEnabled(true);
     lblState->setText(trUtf8("Offline"));
@@ -222,10 +241,15 @@ void MainWindow::plcStarted()
     cbRec->setEnabled(true);
     cbRec->setChecked(false);
     cbRec->setStyleSheet(QString());
+    cbPlot->setEnabled(true);
+    cbPlot->setChecked(false);
+    cbPlot->setStyleSheet(QString());
 
     ui->actionLoadSettings->setEnabled(false);
     lblState->setText(trUtf8("<b>ONLINE</b>"));
     appendLog(trUtf8("Activating ONLINE."));
+
+    graph->setupGraphs(vtmodel->getCWPList());
 
     if (autoOnLogging || (gSet->restoreCSV && savedCSVActive)) {
         appendLog(trUtf8("Restore CSV recording."));
@@ -247,6 +271,9 @@ void MainWindow::plcStopped()
     savedCSVActive = cbRec->isChecked();
     cbRec->setChecked(false);
     cbRec->setStyleSheet(QString());
+    cbPlot->setEnabled(false);
+    cbPlot->setChecked(false);
+    cbPlot->setStyleSheet(QString());
 
     ui->actionLoadSettings->setEnabled(false);
     lblState->setText(trUtf8("Online"));
@@ -275,10 +302,12 @@ void MainWindow::plcErrorMsg(const QString &msg)
 
 void MainWindow::plcVariablesUpdatedConsistent(const CWPList &wp, const QDateTime &stm)
 {
+    // Updating VAT
     if (cbVat->isChecked()) {
-        cbVat->setStyleSheet("background-color: cyan; color: white; font: bold;");
         vtmodel->loadActualsFromPLC(wp);
     }
+
+    // Updating CSV
     if ((cbRec->isChecked()) && (csvLog.device()!=nullptr)) {
         if (!csvHasHeader) {
             QString hdr = trUtf8("\"Time\"; ");
@@ -295,6 +324,11 @@ void MainWindow::plcVariablesUpdatedConsistent(const CWPList &wp, const QDateTim
             s += QString("%1; ").arg(gSet->plcFormatActualValue(wp.at(i)));
         }
         csvLog << s << QString("\r\n");
+    }
+
+    // Updating Plot
+    if (cbPlot->isChecked()) {
+        graph->addData(wp,stm);
     }
 }
 
@@ -506,6 +540,32 @@ void MainWindow::csvStopClose()
         appendLog(trUtf8("CSV recording stopped. File closed."));
     }
     ui->actionForceRotateCSV->setEnabled(false);
+}
+
+void MainWindow::plotControl()
+{
+    if (cbPlot->isChecked()) {
+        graph->show();
+        cbPlot->setStyleSheet("background-color: blue; color: yellow; font: bold;");
+    } else {
+        graph->hide();
+        cbPlot->setStyleSheet(QString());
+    }
+}
+
+void MainWindow::plotStop()
+{
+    cbPlot->setChecked(false);
+    cbPlot->setStyleSheet(QString());
+    graph->hide();
+}
+
+void MainWindow::vatControl()
+{
+    if (cbVat->isChecked())
+        cbVat->setStyleSheet("background-color: cyan; color: white; font: bold;");
+    else
+        cbVat->setStyleSheet(QString());
 }
 
 void MainWindow::ctlAggregatedStart()

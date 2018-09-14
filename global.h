@@ -15,6 +15,8 @@ public:
     int tmTCPTimeout, tmMaxRecErrorCount, tmMaxConnectRetryCount;
     int tmWaitReconnect, tmTotalRetryCount;
     bool suppressMsgBox, restoreCSV;
+    int plotVerticalSize;
+
 
     // -------------------------------------------------
 

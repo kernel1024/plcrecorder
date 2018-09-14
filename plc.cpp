@@ -1,68 +1,72 @@
-#include <QtCore>
+#include <limits.h>
 #include "specwidgets.h"
 #include "plc.h"
-#include "limits.h"
+#include "plc_p.h"
+#include "libnodave/nodave.h"
+#include "libnodave/openSocket.h"
+#include <QDebug>
 
 CPLC::CPLC(QObject *parent) :
-    QObject(parent)
+    QObject(parent),
+    dptr(new CPLCPrivate(this))
 {
-    ip = QString();
-    rack = 0;
-    slot = 0;
-    fds.rfd = 0;
-    fds.wfd = 0;
-    skippedTicks = 0;
-    recErrorsCount = 0;
-    updateInterval = 0;
-    state = splcDisconnected;
-    netTimeout = 5000000;
-    tmMaxRecErrorCount = 50;
-    tmMaxConnectRetryCount = 1;
-    tmWaitReconnect = 2;
+    dptr->ip = QString();
+    dptr->rack = 0;
+    dptr->slot = 0;
+    dptr->fds.rfd = 0;
+    dptr->fds.wfd = 0;
+    dptr->skippedTicks = 0;
+    dptr->recErrorsCount = 0;
+    dptr->updateInterval = 0;
+    dptr->state = splcDisconnected;
+    dptr->netTimeout = 5000000;
+    dptr->tmMaxRecErrorCount = 50;
+    dptr->tmMaxConnectRetryCount = 1;
+    dptr->tmWaitReconnect = 2;
 
-    daveIntf = nullptr;
-    daveConn = nullptr;
+    dptr->daveIntf = nullptr;
+    dptr->daveConn = nullptr;
 
-    wp.clear();
+    dptr->watchpoints.clear();
 
-    mainClock = nullptr;
-    resClock = nullptr;
-    infClock = nullptr;
+    dptr->mainClock = nullptr;
+    dptr->resClock = nullptr;
+    dptr->infClock = nullptr;
 
-    rearrangeWatchpoints();
+    dptr->rearrangeWatchpoints();
 }
 
 CPLC::~CPLC()
 {
-
+    dptr->deleteLater();
 }
 
 void CPLC::plcSetWatchpoints(const CWPList &aWatchpoints)
 {
-    if (state!=splcDisconnected) {
+    if (dptr->state!=splcDisconnected) {
         emit plcError(trUtf8("You can add variables only in disconnected state."));
         return;
     }
 
-    wp = aWatchpoints;
+    dptr->watchpoints = aWatchpoints;
 
-    if (!rearrangeWatchpoints()) {
-        wp.clear();
-        pairings.clear();
+    if (!dptr->rearrangeWatchpoints()) {
+        dptr->watchpoints.clear();
+        dptr->pairings.clear();
         return;
     }
 }
 
 void CPLC::plcSetRetryParams(int maxErrorCnt, int maxRetryCnt, int waitReconnect)
 {
-    tmMaxRecErrorCount = maxErrorCnt;
-    tmMaxConnectRetryCount = maxRetryCnt;
-    tmWaitReconnect = waitReconnect;
+    dptr->tmMaxRecErrorCount = maxErrorCnt;
+    dptr->tmMaxConnectRetryCount = maxRetryCnt;
+    dptr->tmWaitReconnect = waitReconnect;
 }
 
-bool CPLC::rearrangeWatchpoints()
+bool CPLCPrivate::rearrangeWatchpoints()
 {
-    if (state != splcDisconnected) {
+    if (state != CPLC::splcDisconnected) {
         qDebug() << "ERROR: rearrange called after connection";
         return false;
     }
@@ -73,20 +77,20 @@ bool CPLC::rearrangeWatchpoints()
     int maxPDU = 200;
 
     // pairing
-    for (int i=0;i<wp.count();i++) {
+    for (int i=0;i<watchpoints.count();i++) {
         // udefined variable
-        if (wp.at(i).varea==CWP::NoArea) {
+        if (watchpoints.at(i).varea==CWP::NoArea) {
             pairings.clear();
             return false;
         }
         // add to existing pair
         bool paired = false;
         // do not group timers and counters
-        if ((wp.at(i).varea!=CWP::Counters) && (wp.at(i).varea!=CWP::Timers)) {
+        if ((watchpoints.at(i).varea!=CWP::Counters) && (watchpoints.at(i).varea!=CWP::Timers)) {
             for (int j=0;j<pairings.count();j++) {
-                if ((wp.at(i).varea!=pairings.at(j).area) || (wp.at(i).vdb!=pairings.at(j).db)) continue;
+                if ((watchpoints.at(i).varea!=pairings.at(j).area) || (watchpoints.at(i).vdb!=pairings.at(j).db)) continue;
 
-                if (pairings[j].sizeWith(wp.at(i)) < maxPDU) {
+                if (pairings[j].sizeWith(watchpoints.at(i)) < maxPDU) {
                     pairings[j].items << i;
                     pairings[j].calcSize();
                     paired = true;
@@ -96,7 +100,7 @@ bool CPLC::rearrangeWatchpoints()
         }
         // no pair - create new
         if (!paired) {
-            pairings << CPairing(&wp,wp.at(i).varea,wp.at(i).vdb);
+            pairings << CPairing(&watchpoints,watchpoints.at(i).varea,watchpoints.at(i).vdb);
             pairings.last().items << i;
             pairings.last().calcSize();
         }
@@ -106,235 +110,242 @@ bool CPLC::rearrangeWatchpoints()
 
 void CPLC::plcSetAddress(const QString &Ip, int Rack, int Slot, int Timeout)
 {
-    if (state!=splcDisconnected) {
+    if (dptr->state!=splcDisconnected) {
         emit plcError(trUtf8("Unable to change connection settings in online mode. Disconnect and try again."));
         return;
     }
-    ip = Ip;
-    rack = Rack;
-    slot = Slot;
-    netTimeout = Timeout;
+    dptr->ip = Ip;
+    dptr->rack = Rack;
+    dptr->slot = Slot;
+    dptr->netTimeout = Timeout;
 }
 
 void CPLC::plcSetAcqInterval(int Milliseconds)
 {
-    mainClock->setInterval(Milliseconds);
+    dptr->mainClock->setInterval(Milliseconds);
 }
 
 void CPLC::plcConnect()
 {
-    if (state!=splcDisconnected) {
+    if (dptr->state!=splcDisconnected) {
         emit plcError(trUtf8("Unable to connect - connection is still active. Disconnect and try again."));
         return;
     }
 
-    if (!rearrangeWatchpoints()) {
+    if (!dptr->rearrangeWatchpoints()) {
         emit plcError(trUtf8("Unable to parse and rearrange variable list.\n"
                              "Possible syntax error in one or more variable definitions.\n"
                              "PLC connection was stopped."));
         return;
     }
 
-    for (int i=0;i<tmMaxConnectRetryCount;i++) {
-        fds.rfd = openSocket(102,ip.toLatin1().constData());
-        fds.wfd = fds.rfd;
+    for (int i=0;i<dptr->tmMaxConnectRetryCount;i++) {
+        dptr->fds.rfd = openSocket(102,dptr->ip.toLatin1().constData());
+        dptr->fds.wfd = dptr->fds.rfd;
 
-        if (fds.rfd>0) {
+        if (dptr->fds.rfd>0) {
             char ifname[63];
             strcpy(ifname,"IF1");
-            daveIntf = daveNewInterface(fds,ifname,0,daveProtoISOTCP, daveSpeed187k);
-            if (daveIntf != nullptr) {
-                daveSetTimeout(daveIntf,netTimeout);
-                daveConn = daveNewConnection(daveIntf,0,rack,slot);
-                if (daveConn != nullptr) {
-                    int res = daveConnectPLC(daveConn);
+            dptr->daveIntf = daveNewInterface(dptr->fds,ifname,0,daveProtoISOTCP, daveSpeed187k);
+            if (dptr->daveIntf != nullptr) {
+                daveSetTimeout(dptr->daveIntf,dptr->netTimeout);
+                dptr->daveConn = daveNewConnection(dptr->daveIntf,0,dptr->rack,dptr->slot);
+                if (dptr->daveConn != nullptr) {
+                    int res = daveConnectPLC(dptr->daveConn);
                     if (res == 0) {
-                        state = splcConnected;
+                        dptr->state = splcConnected;
                         emit plcOnConnect();
                         return;
                     } else {
-                        daveDisconnectPLC(daveConn);
-                        daveDisconnectAdapter(daveIntf);
-                        closeSocket(fds.rfd);
-                        daveConn = nullptr;
-                        daveIntf = nullptr;
-                        fds.rfd = 0; fds.wfd = 0;
+                        daveDisconnectPLC(dptr->daveConn);
+                        daveDisconnectAdapter(dptr->daveIntf);
+                        closeSocket(dptr->fds.rfd);
+                        dptr->daveConn = nullptr;
+                        dptr->daveIntf = nullptr;
+                        dptr->fds.rfd = 0; dptr->fds.wfd = 0;
                         emit plcError(trUtf8("Unable to connect to PLC."));
                     }
                 } else {
-                    daveDisconnectAdapter(daveIntf);
-                    closeSocket(fds.rfd);
-                    daveConn = nullptr;
-                    daveIntf = nullptr;
-                    fds.rfd = 0; fds.wfd = 0;
+                    daveDisconnectAdapter(dptr->daveIntf);
+                    closeSocket(dptr->fds.rfd);
+                    dptr->daveConn = nullptr;
+                    dptr->daveIntf = nullptr;
+                    dptr->fds.rfd = 0; dptr->fds.wfd = 0;
                     emit plcError(trUtf8("Unable to connect to specified IP."));
                 }
             } else {
-                closeSocket(fds.rfd);
-                daveConn = nullptr;
-                daveIntf = nullptr;
-                fds.rfd = 0; fds.wfd = 0;
+                closeSocket(dptr->fds.rfd);
+                dptr->daveConn = nullptr;
+                dptr->daveIntf = nullptr;
+                dptr->fds.rfd = 0; dptr->fds.wfd = 0;
                 emit plcError(trUtf8("Unable to create IF1 interface for PLC connection at specified IP."));
             }
         } else {
-            daveConn = nullptr;
-            daveIntf = nullptr;
-            fds.rfd = 0; fds.wfd = 0;
+            dptr->daveConn = nullptr;
+            dptr->daveIntf = nullptr;
+            dptr->fds.rfd = 0; dptr->fds.wfd = 0;
             emit plcError(trUtf8("Unable to open socked to specified IP."));
         }
-        CSleep::sleep(static_cast<unsigned long>(tmWaitReconnect));
+        CSleep::sleep(static_cast<unsigned long>(dptr->tmWaitReconnect));
     }
     emit plcConnectFailed();
 }
 
 void CPLC::plcStart()
 {
-    if (mainClock==nullptr) return;
-    if (state != splcConnected) {
+    if (dptr->mainClock==nullptr) return;
+    if (dptr->state != splcConnected) {
         emit plcError(trUtf8("Unable to start PLC recording. libnodave is not ready."));
         return;
     }
-    if (pairings.isEmpty()) {
+    if (dptr->pairings.isEmpty()) {
         emit plcError(trUtf8("Variables is not parsed and prepared. Recording failure."));
         emit plcStartFailed();
         return;
     }
-    updateClock.start();
-    mainClock->start();
-    state = splcRecording;
+    dptr->updateClock.start();
+    dptr->mainClock->start();
+    dptr->state = splcRecording;
     emit plcOnStart();
 }
 
 void CPLC::plcStop()
 {
-    if (state != splcRecording) {
+    if (dptr->state != splcRecording) {
         emit plcError(trUtf8("Unable to stop PLC recording, recording was not even started."));
         return;
     }
-    state = splcConnected;
-    mainClock->stop();
+    dptr->state = splcConnected;
+    dptr->mainClock->stop();
     emit plcOnStop();
 }
 
 void CPLC::plcDisconnect()
 {
-    if (state == splcDisconnected) {
+    if (dptr->state == splcDisconnected) {
         emit plcError(trUtf8("Not connected to PLC."));
         return;
     }
 
-    if (state == splcRecording)
+    if (dptr->state == splcRecording)
         plcStop();
 
-    if (state != splcConnected) {
+    if (dptr->state != splcConnected) {
         emit plcError(trUtf8("Unable to stop PLC recording."));
         return;
     }
 
-    daveDisconnectPLC(daveConn);
-    daveDisconnectAdapter(daveIntf);
-    closeSocket(fds.rfd);
-    daveConn = nullptr;
-    daveIntf = nullptr;
-    fds.rfd = 0; fds.wfd = 0;
+    daveDisconnectPLC(dptr->daveConn);
+    daveDisconnectAdapter(dptr->daveIntf);
+    closeSocket(dptr->fds.rfd);
+    dptr->daveConn = nullptr;
+    dptr->daveIntf = nullptr;
+    dptr->fds.rfd = 0; dptr->fds.wfd = 0;
 
-    state = splcDisconnected;
+    dptr->state = splcDisconnected;
 
     emit plcOnDisconnect();
 }
 
 void CPLC::correctToThread()
 {
-    mainClock = new QTimer(this);
-    resClock = new QTimer(this);
-    infClock = new QTimer(this);
+    dptr->mainClock = new QTimer(this);
+    dptr->resClock = new QTimer(this);
+    dptr->infClock = new QTimer(this);
 
-    mainClock->setInterval(250);
-    resClock->setInterval(120*60*1000); // 2 min for reset accumulated record errors
-    infClock->setInterval(2000);
+    dptr->mainClock->setInterval(100);
+    dptr->resClock->setInterval(120*60*1000); // 2 min for reset accumulated record errors
+    dptr->infClock->setInterval(2000);
 
-    connect(mainClock,&QTimer::timeout,this,&CPLC::plcClock);
-    connect(resClock,&QTimer::timeout,this,&CPLC::resetClock);
-    connect(infClock,&QTimer::timeout,this,&CPLC::infoClock);
+    connect(dptr->mainClock,&QTimer::timeout,this,&CPLC::plcClock);
+    connect(dptr->resClock,&QTimer::timeout,[this](){
+        dptr->recErrorsCount = 0;
+    });
+    connect(dptr->infClock,&QTimer::timeout,[this](){
+        if (dptr->state==splcRecording)
+            emit plcScanTime(trUtf8("%1 ms").arg(dptr->updateInterval));
+        else
+            emit plcScanTime(trUtf8("- ms"));
+    });
 
-    resClock->start();
-    infClock->start();
+    dptr->resClock->start();
+    dptr->infClock->start();
 }
 
 void CPLC::plcClock()
 {
-    if (state!=splcRecording) return;
-    if (mainClock==nullptr) return;
-    if (!clockInterlock.tryLock()) {
-        if (mainClock->interval()>0)
-            skippedTicks++;
+    if (dptr->state!=splcRecording) return;
+    if (dptr->mainClock==nullptr) return;
+    if (!dptr->clockInterlock.tryLock()) {
+        if (dptr->mainClock->interval()>0)
+            dptr->skippedTicks++;
         return;
     }
 
-    updateInterval = updateClock.restart();
+    dptr->updateInterval = dptr->updateClock.restart();
     QDateTime tms = QDateTime::currentDateTime();
 
-    for (int i=0;i<pairings.count();i++) {
-        int ofs = pairings[i].offset();
-        int sz = pairings[i].size();
-        int area = pairings.at(i).area;
-        int db = pairings.at(i).db;
+    for (int i=0;i<dptr->pairings.count();i++) {
+        int ofs = dptr->pairings[i].offset();
+        int sz = dptr->pairings[i].size();
+        int area = dptr->pairings.at(i).area;
+        int db = dptr->pairings.at(i).db;
         if ((area!=daveDB) && (area!=daveDI))
             db = 0;
 
-        int res = daveReadBytes(daveConn,area,db,ofs,sz,nullptr);
+        int res = daveReadBytes(dptr->daveConn,area,db,ofs,sz,nullptr);
         if (res==0) {
-            for (int j=0;j<pairings.at(i).items.count();j++) {
-                int idx = pairings.at(i).items.at(j);
-                int iofs = wp.at(idx).offset;
-                CWP::VType t = wp.at(idx).vtype;
+            for (int j=0;j<dptr->pairings.at(i).items.count();j++) {
+                int idx = dptr->pairings.at(i).items.at(j);
+                int iofs = dptr->watchpoints.at(idx).offset;
+                CWP::VType t = dptr->watchpoints.at(idx).vtype;
                 if (area==CWP::Counters) {
-                    wp[idx].data = QVariant(daveGetCounterValueAt(daveConn,0));
+                    dptr->watchpoints[idx].data = QVariant(daveGetCounterValueAt(dptr->daveConn,0));
                 } else if (area==CWP::Timers) {
-                    wp[idx].data = QVariant(daveGetSecondsAt(daveConn,0));
+                    dptr->watchpoints[idx].data = QVariant(daveGetSecondsAt(dptr->daveConn,0));
                 } else {
                     switch (t) {
                         case CWP::S7BOOL:
-                            wp[idx].data = QVariant(((daveGetU8At(daveConn,iofs-ofs) &
-                                                         (0x01 << wp.at(idx).bitnum)) > 0));
+                            dptr->watchpoints[idx].data = QVariant(((daveGetU8At(dptr->daveConn,iofs-ofs) &
+                                                         (0x01 << dptr->watchpoints.at(idx).bitnum)) > 0));
                             break;
                         case CWP::S7BYTE:
-                            wp[idx].data = QVariant(static_cast<uint>(daveGetU8At(daveConn,iofs-ofs)));
+                            dptr->watchpoints[idx].data = QVariant(static_cast<uint>(daveGetU8At(dptr->daveConn,iofs-ofs)));
                             break;
                         case CWP::S7WORD:
-                            wp[idx].data = QVariant(static_cast<uint>(daveGetU16At(daveConn,iofs-ofs)));
+                            dptr->watchpoints[idx].data = QVariant(static_cast<uint>(daveGetU16At(dptr->daveConn,iofs-ofs)));
                             break;
                         case CWP::S7DWORD:
-                            wp[idx].data = QVariant(static_cast<uint>(daveGetU32At(daveConn,iofs-ofs)));
+                            dptr->watchpoints[idx].data = QVariant(static_cast<uint>(daveGetU32At(dptr->daveConn,iofs-ofs)));
                             break;
                         case CWP::S7INT:
-                            wp[idx].data = QVariant(daveGetS16At(daveConn,iofs-ofs));
+                            dptr->watchpoints[idx].data = QVariant(daveGetS16At(dptr->daveConn,iofs-ofs));
                             break;
                         case CWP::S7DINT:
-                            wp[idx].data = QVariant(daveGetS32At(daveConn,iofs-ofs));
+                            dptr->watchpoints[idx].data = QVariant(daveGetS32At(dptr->daveConn,iofs-ofs));
                             break;
                         case CWP::S7REAL:
-                            wp[idx].data = QVariant(daveGetFloatAt(daveConn,iofs-ofs));
+                            dptr->watchpoints[idx].data = QVariant(static_cast<double>(daveGetFloatAt(dptr->daveConn,iofs-ofs)));
                             break;
                         case CWP::S7TIME:
                             if (true) {
                                 QTime t = QTime(0,0,0);
-                                int tm = daveGetS32At(daveConn,iofs-ofs);
+                                int tm = daveGetS32At(dptr->daveConn,iofs-ofs);
                                 t = t.addMSecs(abs(tm));
-                                wp[idx].data = QVariant(t);
-                                wp[idx].dataSign = (tm>=0);
+                                dptr->watchpoints[idx].data = QVariant(t);
+                                dptr->watchpoints[idx].dataSign = (tm>=0);
                             }
                             break;
                         case CWP::S7DATE:
                             if (true) {
                                 QDate d = QDate(1990,1,1);
-                                d = d.addDays(static_cast<uint>(daveGetU16At(daveConn,iofs-ofs)));
-                                wp[idx].data = QVariant(d);
+                                d = d.addDays(static_cast<uint>(daveGetU16At(dptr->daveConn,iofs-ofs)));
+                                dptr->watchpoints[idx].data = QVariant(d);
                             }
                             break;
                         case CWP::S7S5TIME:
                             if (true) {
-                                uint s5 = static_cast<uint>(daveGetU16At(daveConn,iofs-ofs));
+                                uint s5 = static_cast<uint>(daveGetU16At(dptr->daveConn,iofs-ofs));
                                 uint s5mode = (s5 >> 12) & 0x03;
                                 s5 = s5 & 0x0fff;
                                 uint mult;
@@ -345,51 +356,38 @@ void CPLC::plcClock()
                                 uint msecs = ((s5 >> 8) & 0x0f)*100 + ((s5 >> 4) & 0x0f)*10 + (s5 & 0x0f);
                                 QTime t = QTime(0,0,0,0);
                                 t = t.addMSecs(static_cast<int>(msecs*mult));
-                                wp[idx].data = QVariant(t);
+                                dptr->watchpoints[idx].data = QVariant(t);
                             }
                             break;
                         case CWP::S7TIME_OF_DAY:
                             if (true) {
                                 QTime t = QTime();
-                                t = t.addMSecs(static_cast<int>(daveGetU32At(daveConn,iofs-ofs)));
-                                wp[idx].data = QVariant(t);
+                                t = t.addMSecs(static_cast<int>(daveGetU32At(dptr->daveConn,iofs-ofs)));
+                                dptr->watchpoints[idx].data = QVariant(t);
                             }
                             break;
                         default:
-                            wp[idx].data = QVariant();
+                            dptr->watchpoints[idx].data = QVariant();
                             break;
                     }
                 }
             }
         } else {
-            if (tmMaxRecErrorCount>0) {
-                recErrorsCount++;
-                if (recErrorsCount>tmMaxRecErrorCount) {
+            if (dptr->tmMaxRecErrorCount>0) {
+                dptr->recErrorsCount++;
+                if (dptr->recErrorsCount>dptr->tmMaxRecErrorCount) {
                     QString strMsg(daveStrerror(res));
                     plcStop();
                     emit plcError(trUtf8("Too many errors on active connection. Recording stopped. %1")
                                   .arg(strMsg));
                 }
             } else
-                recErrorsCount = 0;
+                dptr->recErrorsCount = 0;
         }
     }
-    emit plcVariablesUpdatedConsistent(wp,tms);
+    emit plcVariablesUpdatedConsistent(dptr->watchpoints,tms);
     emit plcVariablesUpdated();
-    clockInterlock.unlock();
-}
-
-void CPLC::resetClock()
-{
-    recErrorsCount = 0;
-}
-
-void CPLC::infoClock()
-{
-    if (state==splcRecording)
-        emit plcScanTime(trUtf8("%1 ms").arg(updateInterval));
-    else
-        emit plcScanTime(trUtf8("- ms"));
+    dptr->clockInterlock.unlock();
 }
 
 CWP::CWP()
