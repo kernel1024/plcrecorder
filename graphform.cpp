@@ -12,6 +12,9 @@ CGraphForm::CGraphForm(QWidget *parent) :
     ui->setupUi(this);
 
     runningCursor = nullptr;
+    leftCursor = nullptr;
+    rightCursor = nullptr;
+    watchpoints.clear();
 
     connect(ui->plot,&QCustomPlot::mouseMove,this,&CGraphForm::plotMouseMove);
 
@@ -25,11 +28,14 @@ CGraphForm::~CGraphForm()
 void CGraphForm::setupGraphs(const CWPList &wp)
 {
     clearData();
+    watchpoints = wp;
 
-    if (runningCursor!=nullptr) {
-        ui->plot->removeItem(runningCursor);
-        runningCursor = nullptr;
-    }
+    if (runningCursor!=nullptr) ui->plot->removeItem(runningCursor);
+    if (leftCursor!=nullptr) ui->plot->removeItem(leftCursor);
+    if (rightCursor!=nullptr) ui->plot->removeItem(rightCursor);
+    runningCursor = nullptr;
+    leftCursor = nullptr;
+    rightCursor = nullptr;
 
     double time = static_cast<double>(QDateTime::currentDateTime().toMSecsSinceEpoch())/1000.0;
 
@@ -53,13 +59,14 @@ void CGraphForm::setupGraphs(const CWPList &wp)
         yAxis->setTickLabels(false);
         if (i==0) {
             QSharedPointer<QCPAxisTickerDateTime> dateTicker(new QCPAxisTickerDateTime);
-            dateTicker->setDateTimeFormat("h:mm:ss\nd.MM.yy");
+            dateTicker->setDateTimeFormat("h:mm:ss.zzz\nd.MM.yy");
             xAxis->setTicker(dateTicker);
         } else
             xAxis->setTickLabels(false);
 
         QCPGraph* graph = ui->plot->addGraph(xAxis,yAxis);
-        graph->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssCross));
+        graph->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssPlus));
+        graph->setLineStyle(QCPGraph::lsStepLeft);
 
         xAxis->setRange(time,time+60);
         double yMin, yMax;
@@ -186,7 +193,7 @@ void CGraphForm::closeEvent(QCloseEvent *event)
 void CGraphForm::clearData()
 {
     ui->plot->clearGraphs();
-
+    watchpoints.clear();
 }
 
 void CGraphForm::plotRangeChanged(const QCPRange &newRange)
@@ -201,56 +208,65 @@ void CGraphForm::plotRangeChanged(const QCPRange &newRange)
 
 void CGraphForm::plotMouseMove(QMouseEvent *event)
 {
-/*    QCPAbstractPlottable *plottable = ui->plot->plottableAt(event->localPos());
-    if (plottable!=nullptr) {
+    QCPAxisRect *rect = ui->plot->axisRectAt(event->localPos());
+    if (rect!=nullptr) {
 
-        bool addLines = false;
         QCPLayer *cursors = ui->plot->layer("cursor");
-        QList<QCPItemStraightLine*> lines;
 
         if (cursors==nullptr) {
             ui->plot->addLayer("cursor");
             ui->plot->setCurrentLayer("main");
             cursors = ui->plot->layer("cursor");
-            addLines = true;
+        }
+
+        double x = rect->axis(QCPAxis::atTop)->pixelToCoord(event->localPos().x());
+
+        QCPItemStraightLine* cursor;
+        if (event->modifiers() & Qt::ControlModifier) cursor = leftCursor;
+        else if (event->modifiers() & Qt::AltModifier) cursor = rightCursor;
+        else cursor = runningCursor;
+
+        if (cursor!=nullptr)
+            ui->plot->removeItem(cursor);
+
+        cursor = new QCPItemStraightLine(ui->plot);
+        cursor->setLayer(cursors);
+        cursor->setClipToAxisRect(false);
+        cursor->setClipAxisRect(rect);
+        cursor->point1->setAxes(rect->axis(QCPAxis::atTop),rect->axis(QCPAxis::atLeft));
+        cursor->point2->setAxes(rect->axis(QCPAxis::atTop),rect->axis(QCPAxis::atLeft));
+        cursor->point1->setCoords(x,QCPRange::minRange);
+        cursor->point2->setCoords(x,QCPRange::maxRange);
+
+        if (event->modifiers() & Qt::ControlModifier) {
+            cursor->setPen(QPen(QBrush(QColor(Qt::green)),2));
+            leftCursor = cursor;
+        } else if (event->modifiers() & Qt::AltModifier) {
+            cursor->setPen(QPen(QBrush(QColor(Qt::red)),2));
+            rightCursor = cursor;
         } else {
-            foreach (QCPLayerable* itm, cursors->children()) {
-                QCPItemStraightLine* item = qobject_cast<QCPItemStraightLine *>(itm);
-                if (item!=nullptr)
-                    lines.append(item);
-            }
+            cursor->setPen(QPen(QBrush(QColor(Qt::black)),2));
+            runningCursor = cursor;
+            // TODO: emit signal with data under cursor: getGraphData(x);
         }
 
-        double x, y;
-        plottable->pixelsToCoords(event->localPos(),x,y);
 
-        if (runningCursor!=nullptr)
-            ui->plot->removeItem(runningCursor);
-        runningCursor = new QCPItemLine(ui->plot);
-        ui->plot-> addItem(runningCursor);
-        vCursor1->setClipToAxisRect(false);
-        vCursor1->setClipAxisRect(axis1);
-        vCursor1->start->setAxes(axis1->axis(QCPAxis::atBottom),axis1->axis(QCPAxis::atLeft));
-        vCursor1->end->setAxes(axis1->axis(QCPAxis::atBottom),axis1->axis(QCPAxis::atLeft));
-        vCursor1->start->setCoords( x, QCPRange::minRange);
-        vCursor1->end->setCoords( x, QCPRange::maxRange);
 
-        for (int i=0;i<ui->plot->axisRectCount();i++) {
-            QCPItemStraightLine *line = nullptr;
-            if (addLines) {
-                line = new QCPItemStraightLine(ui->plot);
-                line->setLayer("cursor");
-                line->setPen(QPen(QColor(Qt::red)));
-            } else {
-                if (i<lines.count())
-                    line = lines.at(i);
-            }
-
-            if (line!=nullptr) {
-                line->point1->setCoords(x,0);
-                line->point2->setCoords(x,1);
-            }
-        }
         cursors->replot();
-    }*/
+    }
+}
+
+QList<double> CGraphForm::getGraphData(double key)
+{
+    QList<double> values;
+
+    for (int i=0;i<ui->plot->graphCount();i++) {
+        const QCPGraph* graph = ui->plot->graph(i);
+        QCPGraphDataContainer::const_iterator it = graph->data()->findBegin(key);
+        if (it != graph->data()->constEnd())
+        {
+            values.append(it->value);
+        }
+    }
+    return values;
 }

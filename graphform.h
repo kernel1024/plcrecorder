@@ -23,8 +23,10 @@ public:
 
 private:
     Ui::CGraphForm *ui;
-    QCPItemLine *runningCursor;
+    CWPList watchpoints;
+    QCPItemStraightLine *runningCursor, *leftCursor, *rightCursor;
     int getScreenWidth();
+    QList<double> getGraphData(double key);
 
 protected:
     virtual void closeEvent(QCloseEvent * event);
