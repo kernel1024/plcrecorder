@@ -2,8 +2,12 @@
 #include "specwidgets.h"
 #include "plc.h"
 #include "plc_p.h"
+
+extern "C" {
 #include "libnodave/nodave.h"
 #include "libnodave/openSocket.h"
+}
+
 #include <QDebug>
 
 CPLC::CPLC(QObject *parent) :

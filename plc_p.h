@@ -7,8 +7,11 @@
 #include <QTimer>
 #include "global.h"
 #include "plc.h"
+
+extern "C" {
 #include "libnodave/nodave.h"
 #include "libnodave/openSocket.h"
+}
 
 class CPLCPrivate : public QObject
 {

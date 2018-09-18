@@ -84,7 +84,7 @@ MainWindow::MainWindow(QWidget *parent) :
     emit plcCorrectToThread();
 
     graph = new CGraphForm(this);
-    graph->setWindowFlag(Qt::Window,true);
+    graph->setWindowFlags(graph->windowFlags() | Qt::Window);
     graph->hide();
 
     connect(ui->btnConnect,&QPushButton::clicked,this,&MainWindow::ctlAggregatedStart);

@@ -27,8 +27,6 @@ SOURCES += libnodave/nodave.c \
 HEADERS  += mainwindow.h \
     libnodave/log2.h \
     libnodave/nodave.h \
-    libnodave/openSocket.h \
-    libnodave/setport.h \
     plc.h \
     varmodel.h \
     global.h \
@@ -53,14 +51,16 @@ unix {
     DEFINES += LINUX
     SOURCES += libnodave/setport.c \
         libnodave/openSocket.c
+    HEADERS += libnodave/openSocket.h \
+        libnodave/setport.h \
 }
 
 win32 {
-    DEFINES += BCCWIN
+    DEFINES += BCCWIN DOEXPORT
+    LIBS += -lws2_32
     SOURCES += libnodave/openSocketw.c \
         libnodave/setportw.c
     HEADERS += libnodave/openS7online.h
-    LIBS += -lws2_32
 }
 
 RC_FILE = plcrecorder.rc
