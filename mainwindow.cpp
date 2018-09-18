@@ -4,12 +4,11 @@
 #include "ui_mainwindow.h"
 #include "global.h"
 #include "varmodel.h"
-#include "outputdialog.h"
+#include "settingsdialog.h"
 #include "specwidgets.h"
-#include "timeoutsdialog.h"
 #include <limits.h>
 
-#define PLR_VERSION 1
+#define PLR_VERSION 2
 
 CGlobal *gSet = nullptr;
 
@@ -43,10 +42,9 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->statusBar->addPermanentWidget(cbVat);
     ui->statusBar->addPermanentWidget(lblState);
 
-    connect(ui->actionCSVSettings,&QAction::triggered,this,&MainWindow::setupOutputSettings);
-    connect(ui->actionTimeouts,&QAction::triggered,this,&MainWindow::setupTimeouts);
-    connect(ui->actionLoadSettings,&QAction::triggered,this,&MainWindow::loadSettings);
-    connect(ui->actionSaveSettings,&QAction::triggered,this,&MainWindow::saveSettings);
+    connect(ui->actionSettings,&QAction::triggered,this,&MainWindow::settingsDlg);
+    connect(ui->actionLoadConnection,&QAction::triggered,this,&MainWindow::loadConnection);
+    connect(ui->actionSaveConnection,&QAction::triggered,this,&MainWindow::saveConnection);
     connect(ui->actionForceRotateCSV,&QAction::triggered,this,&MainWindow::csvRotateFile);
     connect(ui->actionAbout,&QAction::triggered,this,&MainWindow::aboutMsg);
     connect(ui->actionAboutQt,&QAction::triggered,this,&MainWindow::aboutQtMsg);
@@ -69,8 +67,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->btnConnect->setEnabled(true);
     ui->btnDisconnect->setEnabled(false);
-    ui->actionLoadSettings->setEnabled(true);
-    ui->actionSaveSettings->setEnabled(true);
+    ui->actionLoadConnection->setEnabled(true);
+    ui->actionSaveConnection->setEnabled(true);
     ui->actionForceRotateCSV->setEnabled(false);
     cbVat->setEnabled(false);
     cbVat->setChecked(false);
@@ -125,7 +123,7 @@ MainWindow::MainWindow(QWidget *parent) :
         QString s = QApplication::arguments().at(i);
         QFileInfo fi(s);
         if (fi.exists())
-            loadSettingsFromFile(s);
+            loadConnectionFromFile(s);
         else if (s.toLower().startsWith("-start"))
             needToStart = true;
     }
@@ -134,6 +132,8 @@ MainWindow::MainWindow(QWidget *parent) :
         autoOnLogging = true;
         QTimer::singleShot(10*1000,this,&MainWindow::ctlAggregatedStart);
     }
+
+    gSet->loadSettings();
 }
 
 MainWindow::~MainWindow()
@@ -148,20 +148,17 @@ void MainWindow::appendLog(const QString &msg)
                                  arg(msg));
 }
 
-void MainWindow::loadSettingsFromFile(const QString &fname)
+void MainWindow::loadConnectionFromFile(const QString &fname)
 {
     QFile f(fname);
     if (f.open(QIODevice::ReadOnly)) {
         QDataStream in(&f);
-        in.setVersion(QDataStream::Qt_4_7);
+        in.setVersion(QDataStream::Qt_5_2);
         QString aip;
         int acqInt,arack,aslot, v;
         in >> v;
         if (v==PLR_VERSION) {
-            in >> aip >> arack >> aslot >> acqInt >> gSet->outputCSVDir >> gSet->outputFileTemplate >>
-                  gSet->tmTCPTimeout >> gSet->tmMaxRecErrorCount >> gSet->tmMaxConnectRetryCount >>
-                  gSet->tmTotalRetryCount >> gSet->tmWaitReconnect >> gSet->suppressMsgBox >>
-                  gSet->restoreCSV;
+            in >> aip >> arack >> aslot >> acqInt;
             ui->editIP->setText(aip);
             ui->editRack->setValue(arack);
             ui->editSlot->setValue(aslot);
@@ -182,6 +179,13 @@ void MainWindow::loadSettingsFromFile(const QString &fname)
     appendLog(trUtf8("Unable to load file %1.").arg(fname));
 }
 
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    if (gSet!=nullptr)
+        gSet->saveSettings();
+    event->accept();
+}
+
 void MainWindow::plcConnected()
 {
     ui->btnConnect->setEnabled(false);
@@ -198,7 +202,7 @@ void MainWindow::plcConnected()
     cbPlot->setChecked(false);
     cbPlot->setStyleSheet(QString());
 
-    ui->actionLoadSettings->setEnabled(false);
+    ui->actionLoadConnection->setEnabled(false);
 
     lblState->setText(trUtf8("Online"));
     appendLog(trUtf8("Connected to PLC."));
@@ -221,7 +225,7 @@ void MainWindow::plcDisconnected()
     cbPlot->setChecked(false);
     cbPlot->setStyleSheet(QString());
 
-    ui->actionLoadSettings->setEnabled(true);
+    ui->actionLoadConnection->setEnabled(true);
     lblState->setText(trUtf8("Offline"));
     appendLog(trUtf8("Disconnected from PLC."));
     csvStopClose();
@@ -245,7 +249,7 @@ void MainWindow::plcStarted()
     cbPlot->setChecked(false);
     cbPlot->setStyleSheet(QString());
 
-    ui->actionLoadSettings->setEnabled(false);
+    ui->actionLoadConnection->setEnabled(false);
     lblState->setText(trUtf8("<b>ONLINE</b>"));
     appendLog(trUtf8("Activating ONLINE."));
 
@@ -275,7 +279,7 @@ void MainWindow::plcStopped()
     cbPlot->setChecked(false);
     cbPlot->setStyleSheet(QString());
 
-    ui->actionLoadSettings->setEnabled(false);
+    ui->actionLoadConnection->setEnabled(false);
     lblState->setText(trUtf8("Online"));
     appendLog(trUtf8("Deactivating ONLINE."));
     csvStopClose();
@@ -366,6 +370,8 @@ void MainWindow::aboutQtMsg()
 
 void MainWindow::variablesCtxMenu(QPoint pos)
 {
+    if (!vtmodel->isEditEnabled()) return;
+
     QMenu cm(ui->tableVariables);
 
     QAction* acm;
@@ -400,22 +406,13 @@ void MainWindow::variablesCtxMenu(QPoint pos)
     cm.exec(ui->tableVariables->mapToGlobal(p));
 }
 
-void MainWindow::setupOutputSettings()
+void MainWindow::settingsDlg()
 {
-    COutputDialog dlg;
-    dlg.setParams(gSet->outputCSVDir,gSet->outputFileTemplate);
-    if (dlg.exec()) {
-        gSet->outputCSVDir = dlg.getOutputDir();
-        gSet->outputFileTemplate = dlg.getFileTemplate();
-    }
-}
-
-void MainWindow::setupTimeouts()
-{
-    CTimeoutsDialog dlg;
-    dlg.setParams(gSet->tmTCPTimeout,gSet->tmMaxRecErrorCount,gSet->tmMaxConnectRetryCount,
-                  gSet->tmWaitReconnect,gSet->tmTotalRetryCount,gSet->suppressMsgBox,
-                  gSet->restoreCSV);
+    CSettingsDialog dlg;
+    // TODO: add plot parameters
+    dlg.setParams(gSet->outputCSVDir,gSet->outputFileTemplate,gSet->tmTCPTimeout,gSet->tmMaxRecErrorCount,
+                  gSet->tmMaxConnectRetryCount,gSet->tmWaitReconnect,gSet->tmTotalRetryCount,gSet->suppressMsgBox,
+                                        gSet->restoreCSV);
     if (dlg.exec()) {
         gSet->tmTCPTimeout = dlg.getTCPTimeout();
         gSet->tmMaxRecErrorCount = dlg.getMaxRecErrorCount();
@@ -424,19 +421,21 @@ void MainWindow::setupTimeouts()
         gSet->tmTotalRetryCount = dlg.getTotalRetryCount();
         gSet->suppressMsgBox = dlg.getSuppressMsgBox();
         gSet->restoreCSV = dlg.getRestoreCSV();
+        gSet->outputCSVDir = dlg.getOutputDir();
+        gSet->outputFileTemplate = dlg.getFileTemplate();
     }
 }
 
-void MainWindow::loadSettings()
+void MainWindow::loadConnection()
 {
     QString s = getOpenFileNameD(this,trUtf8("Load connection settings file"),QString(),
                                  trUtf8("PLC recorder files (*.plr)"));
     if (s.isEmpty()) return;
 
-    loadSettingsFromFile(s);
+    loadConnectionFromFile(s);
 }
 
-void MainWindow::saveSettings()
+void MainWindow::saveConnection()
 {
     QString s = getSaveFileNameD(this,trUtf8("Save connection settings file"),QString(),
                                  trUtf8("PLC recorder files (*.plr)"));
@@ -447,13 +446,10 @@ void MainWindow::saveSettings()
     QFile f(s);
     if (f.open(QIODevice::WriteOnly)) {
         QDataStream out(&f);
-        out.setVersion(QDataStream::Qt_4_7);
+        out.setVersion(QDataStream::Qt_5_2);
         int v = PLR_VERSION;
-        out << v << ui->editIP->text() << ui->editRack->value() << ui->editSlot->value() <<
-               ui->editAcqInterval->value() << gSet->outputCSVDir << gSet->outputFileTemplate <<
-               gSet->tmTCPTimeout << gSet->tmMaxRecErrorCount << gSet->tmMaxConnectRetryCount <<
-               gSet->tmTotalRetryCount << gSet->tmWaitReconnect << gSet->suppressMsgBox <<
-               gSet->restoreCSV;
+        out << v << ui->editIP->text() << ui->editRack->value() <<
+               ui->editSlot->value() << ui->editAcqInterval->value();
         vtmodel->saveWPList(out);
         f.flush();
         f.close();

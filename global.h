@@ -16,6 +16,7 @@ public:
     int tmWaitReconnect, tmTotalRetryCount;
     bool suppressMsgBox, restoreCSV;
     int plotVerticalSize;
+    bool plotShowScatter;
 
 
     // -------------------------------------------------
@@ -28,6 +29,10 @@ public:
     bool plcSetTypeForName(const QString& tname, CWP &wp);
     bool plcParseAddr(const QString& addr, CWP &wp);
     QString plcFormatActualValue(const CWP& wp);
+    bool plcIsPlottableType(const CWP& aWp);
+
+    void loadSettings();
+    void saveSettings();
 };
 
 extern CGlobal* gSet;

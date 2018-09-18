@@ -45,7 +45,10 @@ private:
     bool savedCSVActive;
     bool aggregatedStartActive;
 
-    void loadSettingsFromFile(const QString& fname);
+    void loadConnectionFromFile(const QString& fname);
+
+protected:
+    virtual void closeEvent(QCloseEvent * event);
 
 public slots:
     void plcConnected();
@@ -60,10 +63,9 @@ public slots:
     void aboutMsg();
     void aboutQtMsg();
     void variablesCtxMenu(QPoint pos);
-    void setupOutputSettings();
-    void setupTimeouts();
-    void loadSettings();
-    void saveSettings();
+    void settingsDlg();
+    void loadConnection();
+    void saveConnection();
     void csvCaptureControl();
     void csvRotateFile();
     void csvSync();

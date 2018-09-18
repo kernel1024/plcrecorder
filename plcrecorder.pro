@@ -19,11 +19,10 @@ SOURCES += libnodave/nodave.c \
     plc.cpp \
     varmodel.cpp \
     global.cpp \
-    outputdialog.cpp \
     specwidgets.cpp \
-    timeoutsdialog.cpp \
     qcustomplot-source/qcustomplot.cpp \
-    graphform.cpp
+    graphform.cpp \
+    settingsdialog.cpp
 
 HEADERS  += mainwindow.h \
     libnodave/log2.h \
@@ -33,17 +32,15 @@ HEADERS  += mainwindow.h \
     plc.h \
     varmodel.h \
     global.h \
-    outputdialog.h \
     specwidgets.h \
-    timeoutsdialog.h \
     qcustomplot-source/qcustomplot.h \
     graphform.h \
-    plc_p.h
+    plc_p.h \
+    settingsdialog.h
 
 FORMS    += mainwindow.ui \
-    outputdialog.ui \
-    timeoutsdialog.ui \
-    graphform.ui
+    graphform.ui \
+    settingsdialog.ui
 
 RESOURCES += \
     plcrecorder.qrc

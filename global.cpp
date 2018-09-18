@@ -1,3 +1,5 @@
+#include <QSettings>
+#include <QStandardPaths>
 #include "global.h"
 #include "plc.h"
 
@@ -9,6 +11,7 @@ CGlobal::CGlobal(QObject *parent) :
     tmTCPTimeout = 5000000;
     tmMaxRecErrorCount = 50;
     plotVerticalSize = 100;
+    plotShowScatter = false;
     tmMaxConnectRetryCount = 1;
     tmWaitReconnect = 2;
     tmTotalRetryCount = 1;
@@ -109,55 +112,68 @@ QStringList CGlobal::plcAvailableTypeNames() {
 bool CGlobal::plcSetTypeForName(const QString &tname, CWP& wp)
 {
     if (tname.toUpper().compare("BOOL")==0) {
+        if (wp.offset<0) wp.offset = 0;
         wp.vtype=CWP::S7BOOL;
         return true;
     }
     if (tname.toUpper().compare("BYTE")==0) {
+        if (wp.offset<0) wp.offset = 0;
         wp.vtype=CWP::S7BYTE;
         return true;
     }
     if (tname.toUpper().compare("WORD")==0) {
+        if (wp.offset<0) wp.offset = 0;
         wp.vtype=CWP::S7WORD;
         return true;
     }
     if (tname.toUpper().compare("INT")==0) {
+        if (wp.offset<0) wp.offset = 0;
         wp.vtype=CWP::S7INT;
         return true;
     }
     if (tname.toUpper().compare("S5TIME")==0) {
+        if (wp.offset<0) wp.offset = 0;
         wp.vtype=CWP::S7S5TIME;
         return true;
     }
     if (tname.toUpper().compare("DATE")==0) {
+        if (wp.offset<0) wp.offset = 0;
         wp.vtype=CWP::S7DATE;
         return true;
     }
     if (tname.toUpper().compare("DWORD")==0) {
+        if (wp.offset<0) wp.offset = 0;
         wp.vtype=CWP::S7DWORD;
         return true;
     }
     if (tname.toUpper().compare("DINT")==0) {
+        if (wp.offset<0) wp.offset = 0;
         wp.vtype=CWP::S7DINT;
         return true;
     }
     if (tname.toUpper().compare("REAL")==0) {
+        if (wp.offset<0) wp.offset = 0;
         wp.vtype=CWP::S7REAL;
         return true;
     }
     if (tname.toUpper().compare("TIME")==0) {
+        if (wp.offset<0) wp.offset = 0;
         wp.vtype=CWP::S7TIME;
         return true;
     }
     if (tname.toUpper().compare("TOD")==0) {
+        if (wp.offset<0) wp.offset = 0;
         wp.vtype=CWP::S7TIME_OF_DAY;
         return true;
     }
     if (tname.toUpper().compare("TIMER")==0) {
+        if (wp.offset<1) wp.offset = 1;
         wp.vtype=CWP::S7WORD;
         wp.varea=CWP::Timers;
         return true;
     }
     if (tname.toUpper().compare("COUNTER")==0) {
+        if (wp.offset<1) wp.offset = 1;
         wp.vtype=CWP::S7INT;
         wp.varea=CWP::Counters;
         return true;
@@ -363,6 +379,59 @@ QString CGlobal::plcFormatActualValue(const CWP &wp)
         default:
             return wp.data.toString();
     }
+}
+
+bool CGlobal::plcIsPlottableType(const CWP &aWp)
+{
+    switch (aWp.vtype) {
+        case CWP::S7BOOL:
+        case CWP::S7BYTE:
+        case CWP::S7WORD:
+        case CWP::S7DWORD:
+        case CWP::S7INT:
+        case CWP::S7DINT:
+        case CWP::S7REAL:
+            return true;
+        default:
+            return false;
+    }
+}
+
+void CGlobal::loadSettings()
+{
+    QSettings settings("kernel1024", "plcrecorder");
+    settings.beginGroup("Settings");
+    gSet->outputCSVDir = settings.value("outputCSVDir",
+                                        QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)).toString();
+    gSet->outputFileTemplate = settings.value("outputFileTemplate",QString()).toString();
+    gSet->tmTCPTimeout = settings.value("timeTCPTimeout",5000000).toInt();
+    gSet->tmMaxRecErrorCount = settings.value("timeMaxRecErrorCount",50).toInt();
+    gSet->tmMaxConnectRetryCount = settings.value("timeMaxConnectRetryCount",1).toInt();
+    gSet->tmTotalRetryCount = settings.value("timeTotalRetryCount",1).toInt();
+    gSet->tmWaitReconnect = settings.value("timeWaitReconnect",2).toInt();
+    gSet->suppressMsgBox = settings.value("suppressMsgBox",false).toBool();
+    gSet->restoreCSV = settings.value("restoreCSV",false).toBool();
+    gSet->plotVerticalSize = settings.value("plotVerticalSize",100).toInt();
+    gSet->plotShowScatter = settings.value("plotShowScatter",false).toBool();
+    settings.endGroup();
+}
+
+void CGlobal::saveSettings()
+{
+    QSettings settings("kernel1024", "plcrecorder");
+    settings.beginGroup("Settings");
+    settings.setValue("outputCSVDir",gSet->outputCSVDir);
+    settings.value("outputFileTemplate",gSet->outputFileTemplate);
+    settings.value("timeTCPTimeout",gSet->tmTCPTimeout);
+    settings.value("timeMaxRecErrorCount",gSet->tmMaxRecErrorCount);
+    settings.value("timeMaxConnectRetryCount",gSet->tmMaxConnectRetryCount);
+    settings.value("timeTotalRetryCount",gSet->tmTotalRetryCount);
+    settings.value("timeWaitReconnect",gSet->tmWaitReconnect);
+    settings.value("suppressMsgBox",gSet->suppressMsgBox);
+    settings.value("restoreCSV",gSet->restoreCSV);
+    settings.value("plotVerticalSize",gSet->plotVerticalSize);
+    settings.value("plotShowScatter",gSet->plotShowScatter);
+    settings.endGroup();
 }
 
 QString getOpenFileNameD ( QWidget * parent, const QString & caption, const QString & dir,

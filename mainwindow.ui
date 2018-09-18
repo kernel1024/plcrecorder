@@ -218,11 +218,11 @@
     <property name="title">
      <string>&amp;File</string>
     </property>
-    <addaction name="actionLoadSettings"/>
-    <addaction name="actionSaveSettings"/>
+    <addaction name="actionLoadConnection"/>
+    <addaction name="actionSaveConnection"/>
     <addaction name="separator"/>
     <addaction name="actionTimeouts"/>
-    <addaction name="actionCSVSettings"/>
+    <addaction name="actionSettings"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
@@ -243,25 +243,31 @@
    <addaction name="menu_2"/>
    <addaction name="menu_3"/>
   </widget>
-  <action name="actionLoadSettings">
+  <action name="actionLoadConnection">
    <property name="icon">
     <iconset resource="plcrecorder.qrc">
      <normaloff>:/open</normaloff>:/open</iconset>
    </property>
    <property name="text">
-    <string>&amp;Load settings...</string>
+    <string>&amp;Load connection...</string>
+   </property>
+   <property name="iconText">
+    <string>Load connection...</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
    </property>
   </action>
-  <action name="actionSaveSettings">
+  <action name="actionSaveConnection">
    <property name="icon">
     <iconset resource="plcrecorder.qrc">
      <normaloff>:/save</normaloff>:/save</iconset>
    </property>
    <property name="text">
-    <string>&amp;Save settings...</string>
+    <string>&amp;Save connection...</string>
+   </property>
+   <property name="iconText">
+    <string>Save connection...</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
@@ -275,9 +281,12 @@
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="actionCSVSettings">
+  <action name="actionSettings">
    <property name="text">
-    <string>Save &amp;CSV...</string>
+    <string>Settings...</string>
+   </property>
+   <property name="iconText">
+    <string>Settings...</string>
    </property>
   </action>
   <action name="actionForceRotateCSV">
