@@ -22,7 +22,8 @@ SOURCES += libnodave/nodave.c \
     specwidgets.cpp \
     qcustomplot-source/qcustomplot.cpp \
     graphform.cpp \
-    settingsdialog.cpp
+    settingsdialog.cpp \
+    csvhandler.cpp
 
 HEADERS  += mainwindow.h \
     libnodave/log2.h \
@@ -34,7 +35,8 @@ HEADERS  += mainwindow.h \
     qcustomplot-source/qcustomplot.h \
     graphform.h \
     plc_p.h \
-    settingsdialog.h
+    settingsdialog.h \
+    csvhandler.h
 
 FORMS    += mainwindow.ui \
     graphform.ui \

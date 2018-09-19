@@ -51,10 +51,26 @@ bool CSettingsDialog::getRestoreCSV()
     return ui->checkRestoreCSV->isChecked();
 }
 
+int CSettingsDialog::getPlotVerticalSize()
+{
+    return ui->spinPlotVerticalSize->value();
+}
+
+bool CSettingsDialog::getPlotShowScatter()
+{
+    return ui->checkPlotShotScatter->isChecked();
+}
+
+bool CSettingsDialog::getPlotAntialiasing()
+{
+    return ui->checkAntialiasing->isChecked();
+}
+
 
 void CSettingsDialog::setParams(const QString &outputDir, const QString &fileTemplate, int tcpTimeout,
-                              int maxRecErrorCount, int maxConnectRetryCount, int waitReconnect,
-                              int totalRetryCount, bool suppressMsgBox, bool restoreCSV)
+                                int maxRecErrorCount, int maxConnectRetryCount, int waitReconnect,
+                                int totalRetryCount, bool suppressMsgBox, bool restoreCSV,
+                                int plotVerticalSize, bool plotShowScatter, bool plotAntialiasing)
 {
     ui->editCSVDir->setText(outputDir);
     ui->editCSVTemplate->setText(fileTemplate);
@@ -65,7 +81,9 @@ void CSettingsDialog::setParams(const QString &outputDir, const QString &fileTem
     ui->spinTotalRetryCount->setValue(totalRetryCount);
     ui->checkSuppressMsgBoxes->setChecked(suppressMsgBox);
     ui->checkRestoreCSV->setChecked(restoreCSV);
-
+    ui->spinPlotVerticalSize->setValue(plotVerticalSize);
+    ui->checkPlotShotScatter->setChecked(plotShowScatter);
+    ui->checkAntialiasing->setChecked(plotAntialiasing);
 }
 
 QString CSettingsDialog::getOutputDir() const
@@ -80,6 +98,6 @@ QString CSettingsDialog::getFileTemplate() const
 
 void CSettingsDialog::selectDirDlg()
 {
-    QString s = getExistingDirectoryD(this,trUtf8("Directory for CSV files"),ui->editCSVDir->text(), nullptr);
+    QString s = getExistingDirectoryD(this,trUtf8("Directory for CSV files"),ui->editCSVDir->text());
     if (!s.isEmpty()) ui->editCSVDir->setText(s);
 }

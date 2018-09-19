@@ -25,9 +25,9 @@ MainWindow::MainWindow(QWidget *parent) :
     appicon.addFile(":/icon40");
     setWindowIcon(appicon);
 
-    gSet = new CGlobal();
-    csvPrevTime = QTime::currentTime();
-    csvHasHeader = false;
+    gSet = new CGlobal(this);
+    csvHandler = new CCSVHandler(this);
+
     agcRestartCounter = 0;
     autoOnLogging = false;
     savedCSVActive = false;
@@ -36,7 +36,7 @@ MainWindow::MainWindow(QWidget *parent) :
     lblState = new QLabel(trUtf8("Offline"));
     cbVat = new QCheckBox(trUtf8("Online VAT"));
     cbRec = new QCheckBox(trUtf8("CSV recording"));
-    cbPlot = new QCheckBox(trUtf8("Time graph"));
+    cbPlot = new QCheckBox(trUtf8("Signal plot"));
     ui->statusBar->addPermanentWidget(cbPlot);
     ui->statusBar->addPermanentWidget(cbRec);
     ui->statusBar->addPermanentWidget(cbVat);
@@ -45,13 +45,13 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSettings,&QAction::triggered,this,&MainWindow::settingsDlg);
     connect(ui->actionLoadConnection,&QAction::triggered,this,&MainWindow::loadConnection);
     connect(ui->actionSaveConnection,&QAction::triggered,this,&MainWindow::saveConnection);
-    connect(ui->actionForceRotateCSV,&QAction::triggered,this,&MainWindow::csvRotateFile);
+    connect(ui->actionForceRotateCSV,&QAction::triggered,csvHandler,&CCSVHandler::rotateFile);
     connect(ui->actionAbout,&QAction::triggered,this,&MainWindow::aboutMsg);
     connect(ui->actionAboutQt,&QAction::triggered,this,&MainWindow::aboutQtMsg);
     connect(ui->tableVariables,&CTableView:: ctxMenuRequested,this,&MainWindow::variablesCtxMenu);
 
     connect(cbVat,&QCheckBox::clicked,this,&MainWindow::vatControl);
-    connect(cbRec,&QCheckBox::clicked,this,&MainWindow::csvCaptureControl);
+    connect(cbRec,&QCheckBox::clicked,this,&MainWindow::csvControl);
     connect(cbPlot,&QCheckBox::clicked,this,&MainWindow::plotControl);
 
     plc = new CPLC();
@@ -86,6 +86,7 @@ MainWindow::MainWindow(QWidget *parent) :
     graph = new CGraphForm(this);
     graph->setWindowFlags(graph->windowFlags() | Qt::Window);
     graph->hide();
+    connect(ui->actionShowPlot,&QAction::triggered,graph,&CGraphForm::show);
 
     connect(ui->btnConnect,&QPushButton::clicked,this,&MainWindow::ctlAggregatedStart);
     connect(ui->btnDisconnect,&QPushButton::clicked,this,&MainWindow::ctlStop);
@@ -115,7 +116,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
     QTimer* syncTimer = new QTimer(this);
     syncTimer->setInterval(60000);
-    connect(syncTimer,&QTimer::timeout,this,&MainWindow::csvSync);
+    connect(syncTimer,&QTimer::timeout,[this](){
+        if (cbRec->isChecked())
+            emit csvSync();
+    });
     syncTimer->start();
 
     bool needToStart = false;
@@ -132,6 +136,18 @@ MainWindow::MainWindow(QWidget *parent) :
         autoOnLogging = true;
         QTimer::singleShot(10*1000,this,&MainWindow::ctlAggregatedStart);
     }
+
+    connect(csvHandler,&CCSVHandler::errorMessage,[this](const QString& message){
+        if (!gSet->suppressMsgBox)
+            QMessageBox::critical(this,trUtf8("PLC recorder error"),message);
+    });
+    connect(csvHandler,&CCSVHandler::recordingStopped,[this](){
+        cbRec->setChecked(false);
+        cbRec->setStyleSheet(QString());
+        ui->actionForceRotateCSV->setEnabled(false);
+    });
+    connect(csvHandler,&CCSVHandler::appendLog,this,&MainWindow::appendLog);
+    connect(this,&MainWindow::csvSync,csvHandler,&CCSVHandler::timerSync);
 
     gSet->loadSettings();
 }
@@ -206,7 +222,9 @@ void MainWindow::plcConnected()
 
     lblState->setText(trUtf8("Online"));
     appendLog(trUtf8("Connected to PLC."));
-    csvStopClose();
+
+    csvHandler->stopClose();
+    ui->actionForceRotateCSV->setEnabled(false);
 }
 
 void MainWindow::plcDisconnected()
@@ -228,7 +246,9 @@ void MainWindow::plcDisconnected()
     ui->actionLoadConnection->setEnabled(true);
     lblState->setText(trUtf8("Offline"));
     appendLog(trUtf8("Disconnected from PLC."));
-    csvStopClose();
+
+    csvHandler->stopClose();
+    ui->actionForceRotateCSV->setEnabled(false);
 }
 
 void MainWindow::plcStarted()
@@ -253,12 +273,10 @@ void MainWindow::plcStarted()
     lblState->setText(trUtf8("<b>ONLINE</b>"));
     appendLog(trUtf8("Activating ONLINE."));
 
-    graph->setupGraphs(vtmodel->getCWPList());
-
     if (autoOnLogging || (gSet->restoreCSV && savedCSVActive)) {
         appendLog(trUtf8("Restore CSV recording."));
         cbRec->setChecked(true);
-        csvCaptureControl();
+        csvControl();
     }
 }
 
@@ -282,7 +300,9 @@ void MainWindow::plcStopped()
     ui->actionLoadConnection->setEnabled(false);
     lblState->setText(trUtf8("Online"));
     appendLog(trUtf8("Deactivating ONLINE."));
-    csvStopClose();
+
+    csvHandler->stopClose();
+    ui->actionForceRotateCSV->setEnabled(false);
 }
 
 void MainWindow::plcStartFailed()
@@ -307,33 +327,16 @@ void MainWindow::plcErrorMsg(const QString &msg)
 void MainWindow::plcVariablesUpdatedConsistent(const CWPList &wp, const QDateTime &stm)
 {
     // Updating VAT
-    if (cbVat->isChecked()) {
+    if (cbVat->isChecked())
         vtmodel->loadActualsFromPLC(wp);
-    }
 
     // Updating CSV
-    if ((cbRec->isChecked()) && (csvLog.device()!=nullptr)) {
-        if (!csvHasHeader) {
-            QString hdr = trUtf8("\"Time\"; ");
-            for (int i=0;i<wp.count();i++) {
-                hdr += QString("\"%1 (%2)\"; ").
-                        arg(wp.at(i).label).
-                        arg(gSet->plcGetAddrName(wp.at(i)));
-            }
-            csvLog << hdr << QString("\r\n");
-            csvHasHeader = true;
-        }
-        QString s = QString("\"%1\"; ").arg(stm.toString("yyyy-MM-dd hh:mm:ss.zzz"));
-        for (int i=0;i<wp.count();i++) {
-            s += QString("%1; ").arg(gSet->plcFormatActualValue(wp.at(i)));
-        }
-        csvLog << s << QString("\r\n");
-    }
+    if (cbRec->isChecked())
+        csvHandler->addData(wp,stm);
 
     // Updating Plot
-    if (cbPlot->isChecked()) {
+    if (cbPlot->isChecked())
         graph->addData(wp,stm);
-    }
 }
 
 void MainWindow::connectPLC()
@@ -409,10 +412,9 @@ void MainWindow::variablesCtxMenu(QPoint pos)
 void MainWindow::settingsDlg()
 {
     CSettingsDialog dlg;
-    // TODO: add plot parameters
     dlg.setParams(gSet->outputCSVDir,gSet->outputFileTemplate,gSet->tmTCPTimeout,gSet->tmMaxRecErrorCount,
                   gSet->tmMaxConnectRetryCount,gSet->tmWaitReconnect,gSet->tmTotalRetryCount,gSet->suppressMsgBox,
-                                        gSet->restoreCSV);
+                  gSet->restoreCSV,gSet->plotVerticalSize,gSet->plotShowScatter,gSet->plotAntialiasing);
     if (dlg.exec()) {
         gSet->tmTCPTimeout = dlg.getTCPTimeout();
         gSet->tmMaxRecErrorCount = dlg.getMaxRecErrorCount();
@@ -423,25 +425,28 @@ void MainWindow::settingsDlg()
         gSet->restoreCSV = dlg.getRestoreCSV();
         gSet->outputCSVDir = dlg.getOutputDir();
         gSet->outputFileTemplate = dlg.getFileTemplate();
+        gSet->plotVerticalSize = dlg.getPlotVerticalSize();
+        gSet->plotShowScatter = dlg.getPlotShowScatter();
+        gSet->plotAntialiasing = dlg.getPlotAntialiasing();
     }
 }
 
 void MainWindow::loadConnection()
 {
-    QString s = getOpenFileNameD(this,trUtf8("Load connection settings file"),QString(),
+    QString s = getOpenFileNameD(this,trUtf8("Load connection settings file"),gSet->savedAuxDir,
                                  trUtf8("PLC recorder files (*.plr)"));
     if (s.isEmpty()) return;
+    gSet->savedAuxDir = QFileInfo(s).absolutePath();
 
     loadConnectionFromFile(s);
 }
 
 void MainWindow::saveConnection()
 {
-    QString s = getSaveFileNameD(this,trUtf8("Save connection settings file"),QString(),
+    QString s = getSaveFileNameD(this,trUtf8("Save connection settings file"),gSet->savedAuxDir,
                                  trUtf8("PLC recorder files (*.plr)"));
     if (s.isEmpty()) return;
-    QFileInfo fi(s);
-    if (fi.suffix().isEmpty()) s+=trUtf8(".plr");
+    gSet->savedAuxDir = QFileInfo(s).absolutePath();
 
     QFile f(s);
     if (f.open(QIODevice::WriteOnly)) {
@@ -460,87 +465,24 @@ void MainWindow::saveConnection()
     }
 }
 
-void MainWindow::csvCaptureControl()
+void MainWindow::csvControl()
 {
+    bool fileOpened = false;
     if (cbRec->isChecked()) {
-        csvRotateFile();
-        if (csvLog.device()!=nullptr)
+        fileOpened = csvHandler->rotateFile();
+        if (fileOpened)
             cbRec->setStyleSheet("background-color: red; color: white; font: bold;");
     } else {
-        csvStopClose();
+        csvHandler->stopClose();
         cbRec->setStyleSheet(QString());
     }
-    ui->actionForceRotateCSV->setEnabled(cbRec->isChecked() && (csvLog.device()!=nullptr));
-}
-
-void MainWindow::csvRotateFile()
-{
-    csvPrevTime = QTime::currentTime();
-    if (gSet->outputCSVDir.isEmpty()) {
-        cbRec->setChecked(false);
-        cbRec->setStyleSheet(QString());
-        ui->actionForceRotateCSV->setEnabled(false);
-        appendLog(trUtf8("CSV rotation failure. Directory for creating CSV files not configured."));
-        if (!gSet->suppressMsgBox)
-            QMessageBox::warning(this,trUtf8("PLC recorder error"),
-                                 trUtf8("Directory for creating CSV files not configured."));
-        return;
-    }
-    csvStopClose();
-
-    QDir d(gSet->outputCSVDir);
-    QString fname = d.filePath(QString("%1_%2.csv").
-                               arg(gSet->outputFileTemplate).
-                               arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_hh-mm-ss")));
-    QFile *f = new QFile(fname);
-    if (!f->open(QIODevice::WriteOnly)) {
-        cbRec->setChecked(false);
-        cbRec->setStyleSheet(QString());
-        ui->actionForceRotateCSV->setEnabled(false);
-        appendLog(trUtf8("Unable to save CSV file %1.").arg(fname));
-        if (!gSet->suppressMsgBox)
-            QMessageBox::critical(this,trUtf8("PLC recorder error"),
-                                  trUtf8("Unable to save file '%1'").arg(fname));
-        return;
-    }
-
-    csvLog.setDevice(f);
-    csvLog.setCodec("Windows-1251");
-    csvHasHeader = false;
-    ui->actionForceRotateCSV->setEnabled(cbRec->isChecked() && (csvLog.device()!=nullptr));
-    appendLog(trUtf8("CSV rotation was successful."));
-}
-
-void MainWindow::csvSync()
-{
-    if (!cbRec->isChecked()) return;
-
-    // reset cache
-    if (csvLog.device()!=nullptr)
-        csvLog.flush();
-
-    // rotate csv at 0:00
-    QTime curTime = QTime::currentTime();
-    bool needToRotate = (csvPrevTime.hour()>curTime.hour());
-    csvPrevTime = curTime;
-    if (needToRotate)
-        csvRotateFile();
-}
-
-void MainWindow::csvStopClose()
-{
-    if (csvLog.device()!=nullptr) {
-        csvLog.flush();
-        csvLog.device()->close();
-        csvLog.setDevice(nullptr);
-        appendLog(trUtf8("CSV recording stopped. File closed."));
-    }
-    ui->actionForceRotateCSV->setEnabled(false);
+    ui->actionForceRotateCSV->setEnabled(cbRec->isChecked() && fileOpened);
 }
 
 void MainWindow::plotControl()
 {
     if (cbPlot->isChecked()) {
+//        graph->setupGraphs(vtmodel->getCWPList());
         graph->show();
         cbPlot->setStyleSheet("background-color: blue; color: yellow; font: bold;");
     } else {

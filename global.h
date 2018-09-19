@@ -17,6 +17,9 @@ public:
     bool suppressMsgBox, restoreCSV;
     int plotVerticalSize;
     bool plotShowScatter;
+    bool plotAntialiasing;
+
+    QString savedAuxDir;
 
 
     // -------------------------------------------------
@@ -37,16 +40,19 @@ public:
 
 extern CGlobal* gSet;
 
-QString getOpenFileNameD ( QWidget * parent, const QString & caption, const QString & dir = QString(),
-                           const QString & filter = QString(), QString * selectedFilter = nullptr,
-                           QFileDialog::Options options = QFileDialog::DontUseNativeDialog );
-QStringList getOpenFileNamesD ( QWidget * parent, const QString & caption, const QString & dir = QString(),
-                                const QString & filter = QString(), QString * selectedFilter = nullptr,
-                                QFileDialog::Options options = QFileDialog::DontUseNativeDialog );
-QString getSaveFileNameD ( QWidget * parent, const QString & caption, const QString & dir = QString(),
-                           const QString & filter = QString(), QString * selectedFilter = nullptr,
-                           QFileDialog::Options options = QFileDialog::DontUseNativeDialog );
-QString	getExistingDirectoryD ( QWidget * parent, const QString & caption, const QString & dir = QString(),
-                                QFileDialog::Options options = QFileDialog::DontUseNativeDialog );
+QString getOpenFileNameD ( QWidget * parent = nullptr, const QString & caption = QString(),
+                           const QString & dir = QString(), const QString & filter = QString(),
+                           QString * selectedFilter = nullptr);
 
+QStringList getOpenFileNamesD ( QWidget * parent = nullptr, const QString & caption = QString(),
+                               const QString & dir = QString(), const QString & filter = QString(),
+                               QString * selectedFilter = nullptr);
+
+QString getSaveFileNameD (QWidget * parent = nullptr, const QString & caption = QString(),
+                          const QString & dir = QString(), const QString & filter = QString(),
+                          QString * selectedFilter = nullptr, QString preselectFileName = QString());
+
+QString	getExistingDirectoryD ( QWidget * parent = nullptr, const QString & caption = QString(),
+                                const QString & dir = QString(),
+                                QFileDialog::Options options = QFileDialog::ShowDirsOnly);
 #endif // CGLOBAL_H

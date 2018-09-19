@@ -25,8 +25,8 @@ public:
     explicit CGraphForm(QWidget *parent = nullptr);
     ~CGraphForm();
 
-    void setupGraphs(const CWPList &wp);
-    void addData(const CWPList &wp, const QDateTime &time);
+    void setupGraphs(const CWPList &wp, bool lazyModification = false);
+    void addData(const CWPList &wp, const QDateTime &time, bool noReplot = false);
 
 private:
     Ui::CGraphForm *ui;
@@ -35,6 +35,8 @@ private:
     bool moveSplitterOnce;
     int getScreenWidth();
     void createCursorSignal(CGraphForm::CursorType cursor, double timestamp);
+    QCPRange getTotalKeyRange();
+    void updateScrollBarRange();
 
 protected:
     virtual void closeEvent(QCloseEvent * event);
@@ -47,10 +49,15 @@ signals:
 
 public slots:
     void clearData();
+    void zoomAll();
+    void loadCSV();
+    void exportGraph();
 
 private slots:
-    void plotRangeChanged (const QCPRange &newRange);
-    void plotMouseMove (QMouseEvent *event);
+    void plotRangeChanged(const QCPRange &newRange);
+    void plotMouseMove(QMouseEvent *event);
+    void scrollBarMoved(int value);
+    void plotContextMenu(const QPoint &pos);
 
 };
 

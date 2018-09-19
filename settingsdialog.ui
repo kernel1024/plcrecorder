@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>851</width>
-    <height>374</height>
+    <width>840</width>
+    <height>368</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -127,22 +127,10 @@
             </property>
            </widget>
           </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QGroupBox" name="groupBox_4">
-         <property name="title">
-          <string>Interface</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_3">
           <item>
-           <widget class="QCheckBox" name="checkSuppressMsgBoxes">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Suppress message boxes with error and warning messages. All messages saving to log window.&lt;/p&gt;&lt;p&gt;Very useful and memory conservative on long background works when starting with '-start' key from command prompt.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
+           <widget class="QCheckBox" name="checkAntialiasing">
             <property name="text">
-             <string>Do not show interactive message boxes</string>
+             <string>Antialiasing</string>
             </property>
            </widget>
           </item>
@@ -237,7 +225,7 @@
             <item row="2" column="0">
              <widget class="QLabel" name="label_3">
               <property name="text">
-               <string>Network timeout / &amp;TCP (ms)</string>
+               <string>Connection &amp;timeout </string>
               </property>
               <property name="buddy">
                <cstring>spinNetTimeout</cstring>
@@ -246,6 +234,9 @@
             </item>
             <item row="2" column="1">
              <widget class="QSpinBox" name="spinNetTimeout">
+              <property name="suffix">
+               <string> ms</string>
+              </property>
               <property name="minimum">
                <number>1000</number>
               </property>
@@ -257,7 +248,7 @@
             <item row="3" column="0">
              <widget class="QLabel" name="label_9">
               <property name="text">
-               <string>&amp;Pause before connection retry (sec)</string>
+               <string>&amp;Pause before connection retry</string>
               </property>
               <property name="wordWrap">
                <bool>true</bool>
@@ -269,6 +260,9 @@
             </item>
             <item row="3" column="1">
              <widget class="QSpinBox" name="spinWaitBeforeRetryConnect">
+              <property name="suffix">
+               <string> sec</string>
+              </property>
               <property name="minimum">
                <number>1</number>
               </property>
@@ -301,6 +295,25 @@
              </widget>
             </item>
            </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_4">
+         <property name="title">
+          <string>Interface</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <item>
+           <widget class="QCheckBox" name="checkSuppressMsgBoxes">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Suppress message boxes with error and warning messages. All messages saving to log window.&lt;/p&gt;&lt;p&gt;Very useful and memory conservative on long background works when starting with '-start' key from command prompt.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Do not show interactive message boxes</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
@@ -365,12 +378,13 @@
   <tabstop>checkRestoreCSV</tabstop>
   <tabstop>spinPlotVerticalSize</tabstop>
   <tabstop>checkPlotShotScatter</tabstop>
-  <tabstop>checkSuppressMsgBoxes</tabstop>
+  <tabstop>checkAntialiasing</tabstop>
   <tabstop>spinMaxRecErrorCount</tabstop>
   <tabstop>spinConnectRetryCount</tabstop>
   <tabstop>spinNetTimeout</tabstop>
   <tabstop>spinWaitBeforeRetryConnect</tabstop>
   <tabstop>spinTotalRetryCount</tabstop>
+  <tabstop>checkSuppressMsgBoxes</tabstop>
   <tabstop>pushButton</tabstop>
   <tabstop>pushButton_2</tabstop>
  </tabstops>

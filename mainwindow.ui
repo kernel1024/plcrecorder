@@ -221,7 +221,6 @@
     <addaction name="actionLoadConnection"/>
     <addaction name="actionSaveConnection"/>
     <addaction name="separator"/>
-    <addaction name="actionTimeouts"/>
     <addaction name="actionSettings"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
@@ -231,6 +230,8 @@
      <string>&amp;Tools</string>
     </property>
     <addaction name="actionForceRotateCSV"/>
+    <addaction name="separator"/>
+    <addaction name="actionShowPlot"/>
    </widget>
    <widget class="QMenu" name="menu_3">
     <property name="title">
@@ -274,6 +275,10 @@
    </property>
   </action>
   <action name="actionQuit">
+   <property name="icon">
+    <iconset theme="application-exit">
+     <normaloff>.</normaloff>.</iconset>
+   </property>
    <property name="text">
     <string>&amp;Exit</string>
    </property>
@@ -283,7 +288,7 @@
   </action>
   <action name="actionSettings">
    <property name="text">
-    <string>Settings...</string>
+    <string>Sett&amp;ings...</string>
    </property>
    <property name="iconText">
     <string>Settings...</string>
@@ -311,6 +316,11 @@
   <action name="actionAboutQt">
    <property name="text">
     <string>About &amp;Qt...</string>
+   </property>
+  </action>
+  <action name="actionShowPlot">
+   <property name="text">
+    <string>Show signal plot</string>
    </property>
   </action>
  </widget>

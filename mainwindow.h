@@ -5,9 +5,9 @@
 #include <QCheckBox>
 #include <QLabel>
 #include <QString>
-#include <QTextStream>
 #include "plc.h"
 #include "graphform.h"
+#include "csvhandler.h"
 
 class CVarModel;
 class CVarDelegate;
@@ -23,6 +23,7 @@ class MainWindow : public QMainWindow
 public:
     CPLC* plc;
     CGraphForm* graph;
+    CCSVHandler* csvHandler;
 
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
@@ -37,9 +38,6 @@ private:
     QThread* plcThread;
     QLabel* lblState;
     QLabel* lblScanTime;
-    QTextStream csvLog;
-    QTime csvPrevTime;
-    bool csvHasHeader;
     int agcRestartCounter;
     bool autoOnLogging;
     bool savedCSVActive;
@@ -49,6 +47,9 @@ private:
 
 protected:
     virtual void closeEvent(QCloseEvent * event);
+
+signals:
+    void csvSync();
 
 public slots:
     void plcConnected();
@@ -66,15 +67,13 @@ public slots:
     void settingsDlg();
     void loadConnection();
     void saveConnection();
-    void csvCaptureControl();
-    void csvRotateFile();
-    void csvSync();
-    void csvStopClose();
 
     void plotControl();
     void plotStop();
 
     void vatControl();
+
+    void csvControl();
 
     void ctlAggregatedStart();
     void ctlStop();

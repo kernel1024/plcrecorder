@@ -576,14 +576,14 @@ QDataStream &operator <<(QDataStream &out, const CWP &obj)
 {
     int a = static_cast<int>(obj.varea);
     int b = static_cast<int>(obj.vtype);
-    out << obj.uuid << a << b <<  obj.vdb << obj.offset << obj.bitnum << obj.label;
+    out << obj.uuid << a << b <<  obj.vdb << obj.offset << obj.bitnum << obj.label << obj.data << obj.dataSign;
     return out;
 }
 
 QDataStream &operator >>(QDataStream &in, CWP &obj)
 {
     int a,b;
-    in >> obj.uuid >> a >> b >> obj.vdb >> obj.offset >> obj.bitnum >> obj.label;
+    in >> obj.uuid >> a >> b >> obj.vdb >> obj.offset >> obj.bitnum >> obj.label >> obj.data >> obj.dataSign;
     obj.varea = static_cast<CWP::VArea>(a);
     obj.vtype = static_cast<CWP::VType>(b);
     return in;

@@ -20,10 +20,18 @@ CGraphForm::CGraphForm(QWidget *parent) :
     rightCursor = nullptr;
     watchpoints.clear();
 
+    ui->plot->setContextMenuPolicy(Qt::CustomContextMenu);
+
     connect(ui->plot,&QCustomPlot::mouseMove,this,&CGraphForm::plotMouseMove);
+    connect(ui->btnLoadCSV,&QPushButton::clicked,this,&CGraphForm::loadCSV);
+    connect(ui->btnExport,&QPushButton::clicked,this,&CGraphForm::exportGraph);
+    connect(ui->horizontalScrollBar,&QScrollBar::valueChanged,this,&CGraphForm::scrollBarMoved);
+    connect(ui->plot,&QCustomPlot::customContextMenuRequested,this,&CGraphForm::plotContextMenu);
 
     ui->splitter->setCollapsible(0,false);
     ui->splitter->setCollapsible(1,true);
+
+    clearData();
 }
 
 CGraphForm::~CGraphForm()
@@ -31,17 +39,19 @@ CGraphForm::~CGraphForm()
     delete ui;
 }
 
-void CGraphForm::setupGraphs(const CWPList &wp)
+void CGraphForm::setupGraphs(const CWPList &wp, bool lazyModification)
 {
+/*    if (lazyModification
+            && !watchpoints.isEmpty()
+            && wp) {
+        // TODO: handle adding data without change existing watchpoints
+        for (int i=0;i<watchpoints.count();i++) {
+
+        }
+
+    }*/
     clearData();
     watchpoints = wp;
-
-    if (runningCursor!=nullptr) ui->plot->removeItem(runningCursor);
-    if (leftCursor!=nullptr) ui->plot->removeItem(leftCursor);
-    if (rightCursor!=nullptr) ui->plot->removeItem(rightCursor);
-    runningCursor = nullptr;
-    leftCursor = nullptr;
-    rightCursor = nullptr;
 
     double time = static_cast<double>(QDateTime::currentDateTime().toMSecsSinceEpoch())/1000.0;
 
@@ -110,6 +120,8 @@ void CGraphForm::setupGraphs(const CWPList &wp)
         yAxis->grid()->setVisible(true);
 
         QCPGraph* graph = ui->plot->addGraph(xAxis,yAxis);
+        graph->setAntialiased(gSet->plotAntialiasing);
+        graph->setAdaptiveSampling(true);
         graph->setLineStyle(QCPGraph::lsStepLeft);
         if (gSet->plotShowScatter)
             graph->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssPlus));
@@ -126,11 +138,11 @@ void CGraphForm::setupGraphs(const CWPList &wp)
     ui->plot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectPlottables);
 }
 
-void CGraphForm::addData(const CWPList &wp, const QDateTime& time)
+void CGraphForm::addData(const CWPList &wp, const QDateTime& time, bool noReplot)
 {
     if (wp.count()!=watchpoints.count()) {
-        emit logMessage(trUtf8("Variables list changed. Clearing old graph data."));
-        setupGraphs(wp);
+        emit logMessage(trUtf8("Variables list changed. Initializing graphs."));
+        setupGraphs(wp,true);
     }
 
     double key = static_cast<double>(time.toMSecsSinceEpoch())/1000.0;
@@ -194,7 +206,11 @@ void CGraphForm::addData(const CWPList &wp, const QDateTime& time)
         for (int i=0;i<ui->plot->axisRectCount();i++)
             ui->plot->axisRect(i)->axis(QCPAxis::atTop)->setRange(start,start+size);
     }
-    ui->plot->replot();
+
+    if (!noReplot) {
+        updateScrollBarRange();
+        ui->plot->replot();
+    }
 }
 
 int CGraphForm::getScreenWidth()
@@ -232,7 +248,56 @@ void CGraphForm::showEvent(QShowEvent *)
 void CGraphForm::clearData()
 {
     ui->plot->clearGraphs();
+    ui->plot->plotLayout()->clear();
+
+    if (runningCursor!=nullptr) ui->plot->removeItem(runningCursor);
+    if (leftCursor!=nullptr) ui->plot->removeItem(leftCursor);
+    if (rightCursor!=nullptr) ui->plot->removeItem(rightCursor);
+    runningCursor = nullptr;
+    leftCursor = nullptr;
+    rightCursor = nullptr;
+
+    ui->plot->replot();
+
     watchpoints.clear();
+    ui->horizontalScrollBar->setRange(0,0);
+    ui->horizontalScrollBar->setEnabled(false);
+}
+
+QCPRange CGraphForm::getTotalKeyRange()
+{
+    QCPRange res(qQNaN(),qQNaN());
+    for (int i=0;i<ui->plot->graphCount();i++) {
+        bool foundRange;
+        QCPRange dataRange = ui->plot->graph(i)->getKeyRange(foundRange, QCP::sdBoth);
+        if (foundRange)
+            res.expand(dataRange);
+    }
+
+    return res;
+}
+
+void CGraphForm::updateScrollBarRange()
+{
+    QCPRange xRange = getTotalKeyRange();
+    if (xRange.size()>0.0) {
+        ui->horizontalScrollBar->setMaximum(static_cast<int>(xRange.size())); // scrollbar range from 0, in seconds
+        if (!ui->horizontalScrollBar->isEnabled())
+            ui->horizontalScrollBar->setEnabled(true);
+    }
+}
+
+void CGraphForm::zoomAll()
+{
+    if (ui->plot->axisRectCount()<1 ||
+            ui->plot->graphCount()<1) return;
+
+    QCPRange totalRange = getTotalKeyRange();
+    if (QCPRange::validRange(totalRange))
+        for (int i=0;i<ui->plot->axisRectCount();i++)
+            ui->plot->axisRect(i)->axis(QCPAxis::atTop)->setRange(totalRange);
+
+    ui->plot->replot();
 }
 
 void CGraphForm::plotRangeChanged(const QCPRange &newRange)
@@ -242,6 +307,13 @@ void CGraphForm::plotRangeChanged(const QCPRange &newRange)
         QCPAxis* ax = ui->plot->axisRect(i)->axis(QCPAxis::atTop);
         if (ax!=xAxis)
             ax->setRange(newRange);
+    }
+
+    QCPRange totalRange = getTotalKeyRange();
+    if (xAxis!=nullptr && // null axis sender when updating from scrollbar
+            QCPRange::validRange(totalRange)) {
+        ui->horizontalScrollBar->setValue(static_cast<int>(newRange.center()-totalRange.lower));
+        ui->horizontalScrollBar->setPageStep(static_cast<int>(newRange.size()));
     }
 }
 
@@ -293,6 +365,142 @@ void CGraphForm::plotMouseMove(QMouseEvent *event)
 
         cursors->replot();
     }
+}
+
+void CGraphForm::scrollBarMoved(int value)
+{
+    QCPRange totalRange = getTotalKeyRange();
+    if (!QCPRange::validRange(totalRange) ||
+            ui->plot->axisRectCount()<1) return;
+
+    double newCenter = totalRange.lower + static_cast<double>(value);
+
+    QCPRange currentRange = ui->plot->axisRect(0)->axis(QCPAxis::atTop)->range();
+
+    if (qAbs(newCenter-currentRange.center()) > 0.05)
+    {
+        currentRange += newCenter - currentRange.center();
+        plotRangeChanged(currentRange);
+        ui->plot->replot();
+    }
+}
+
+void CGraphForm::plotContextMenu(const QPoint &pos)
+{
+    QMenu cm(ui->plot);
+
+    QAction* acm;
+    acm = cm.addAction(QIcon("zoom"),trUtf8("Zoom all"));
+    connect(acm,&QAction::triggered,this,&CGraphForm::zoomAll);
+    cm.addSeparator();
+
+    acm = cm.addAction(QIcon("trash-empty"),trUtf8("Clear plot"));
+    connect(acm,&QAction::triggered,this,&CGraphForm::clearData);
+
+    QPoint p = pos;
+    cm.exec(ui->plot->mapToGlobal(p));
+}
+
+void CGraphForm::loadCSV()
+{
+    QString fname = getOpenFileNameD(this,trUtf8("Load CSV file"),gSet->savedAuxDir,
+                                     trUtf8("CSV files (*.csv)"));
+    if (fname.isEmpty()) return;
+    gSet->savedAuxDir = QFileInfo(fname).absolutePath();
+
+    clearData();
+
+    QFile f(fname);
+    if (!f.open(QIODevice::ReadOnly)) {
+        QMessageBox::critical(this,trUtf8("PLC recorder error"),
+                              trUtf8("Unable to open file %1.").arg(fname));
+        return;
+    }
+    QTextStream in(&f);
+    QString s = in.readLine();
+    if (!s.startsWith("\"Time\"; ")) {
+        QMessageBox::critical(this,trUtf8("PLC recorder error"),
+                              trUtf8("Unrecognized CSV file %1.").arg(fname));
+        f.close();
+        return;
+    }
+    int lineNum = 2;
+    while (!in.atEnd()) {
+        s = in.readLine();
+        int idx = s.lastIndexOf("; ");
+        if (idx<0) {
+            QMessageBox::critical(this,trUtf8("PLC recorder error"),
+                                  trUtf8("Unexpected end of file %1 at line %2.").arg(fname).arg(lineNum));
+            f.close();
+            return;
+        }
+        s = s.section("; ",-1,-1,QString::SectionSkipEmpty);
+        QByteArray ba = QByteArray::fromBase64(s.toLatin1());
+        if (ba.isEmpty()) {
+            QMessageBox::critical(this,trUtf8("PLC recorder error"),
+                                  trUtf8("Corrupted scan data in file %1 at line %2.").arg(fname).arg(lineNum));
+            f.close();
+            return;
+        }
+        ba = qUncompress(ba);
+        if (ba.isEmpty()) {
+            QMessageBox::critical(this,trUtf8("PLC recorder error"),
+                                  trUtf8("Corrupted compressed data in file %1 at line %2.").arg(fname).arg(lineNum));
+            f.close();
+            return;
+        }
+
+        QBuffer buf(&ba);
+        buf.open(QIODevice::ReadOnly);
+        QDataStream in(&buf);
+
+        CWPList wp;
+        QDateTime dt;
+        in >> dt >> wp;
+        buf.close();
+        ba.clear();
+
+        if (wp.isEmpty()) {
+            QMessageBox::critical(this,trUtf8("PLC recorder error"),
+                                  trUtf8("Scan data is empty in file %1 at line %2.").arg(fname).arg(lineNum));
+            f.close();
+            return;
+        }
+
+        if (lineNum==2)
+            setupGraphs(wp);
+
+        addData(wp,dt,true);
+        qApp->processEvents();
+
+        lineNum++;
+    }
+    f.close();
+    updateScrollBarRange();
+    zoomAll();
+    qApp->processEvents();
+    QMessageBox::information(this,trUtf8("PLC recorder"),
+                             trUtf8("File successfully loaded."));
+}
+
+void CGraphForm::exportGraph()
+{
+    QString fname = getSaveFileNameD(this,tr("Save to file"),gSet->savedAuxDir,
+                                     tr("PDF file (*.pdf);;PNG file (*.png);;"
+                                        "Jpeg file (*.jpg);;BMP file (*.bmp)"));
+
+    if (fname.isNull() || fname.isEmpty()) return;
+    gSet->savedAuxDir = QFileInfo(fname).absolutePath();
+
+    QFileInfo fi(fname);
+    if (fi.suffix().toLower()=="pdf")
+        ui->plot->savePdf(fname);
+    else if (fi.suffix().toLower()=="png")
+        ui->plot->savePng(fname);
+    else if (fi.suffix().toLower()=="jpg")
+        ui->plot->saveJpg(fname);
+    else if (fi.suffix().toLower()=="bmp")
+        ui->plot->saveBmp(fname);
 }
 
 void CGraphForm::createCursorSignal(CGraphForm::CursorType cursor, double timestamp)

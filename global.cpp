@@ -3,6 +3,10 @@
 #include "global.h"
 #include "plc.h"
 
+static QSize openFileDialogSize = QSize();
+static QSize saveFileDialogSize = QSize();
+const bool dontUseNativeFileDialog = true;
+
 CGlobal::CGlobal(QObject *parent) :
     QObject(parent)
 {
@@ -12,12 +16,13 @@ CGlobal::CGlobal(QObject *parent) :
     tmMaxRecErrorCount = 50;
     plotVerticalSize = 100;
     plotShowScatter = false;
+    plotAntialiasing = true;
     tmMaxConnectRetryCount = 1;
     tmWaitReconnect = 2;
     tmTotalRetryCount = 1;
     suppressMsgBox = false;
     restoreCSV = false;
-    // TODO: save CSV settings, configure plot size, add help for CSV template
+    savedAuxDir = QString();
 }
 
 QString CGlobal::plcGetAddrName(const CWP& aWp) {
@@ -413,6 +418,8 @@ void CGlobal::loadSettings()
     gSet->restoreCSV = settings.value("restoreCSV",false).toBool();
     gSet->plotVerticalSize = settings.value("plotVerticalSize",100).toInt();
     gSet->plotShowScatter = settings.value("plotShowScatter",false).toBool();
+    gSet->plotAntialiasing = settings.value("plotAntialiasing",true).toBool();
+    gSet->savedAuxDir = settings.value("savedAuxDir",QString()).toString();
     settings.endGroup();
 }
 
@@ -421,42 +428,140 @@ void CGlobal::saveSettings()
     QSettings settings("kernel1024", "plcrecorder");
     settings.beginGroup("Settings");
     settings.setValue("outputCSVDir",gSet->outputCSVDir);
-    settings.value("outputFileTemplate",gSet->outputFileTemplate);
-    settings.value("timeTCPTimeout",gSet->tmTCPTimeout);
-    settings.value("timeMaxRecErrorCount",gSet->tmMaxRecErrorCount);
-    settings.value("timeMaxConnectRetryCount",gSet->tmMaxConnectRetryCount);
-    settings.value("timeTotalRetryCount",gSet->tmTotalRetryCount);
-    settings.value("timeWaitReconnect",gSet->tmWaitReconnect);
-    settings.value("suppressMsgBox",gSet->suppressMsgBox);
-    settings.value("restoreCSV",gSet->restoreCSV);
-    settings.value("plotVerticalSize",gSet->plotVerticalSize);
-    settings.value("plotShowScatter",gSet->plotShowScatter);
+    settings.setValue("outputFileTemplate",gSet->outputFileTemplate);
+    settings.setValue("timeTCPTimeout",gSet->tmTCPTimeout);
+    settings.setValue("timeMaxRecErrorCount",gSet->tmMaxRecErrorCount);
+    settings.setValue("timeMaxConnectRetryCount",gSet->tmMaxConnectRetryCount);
+    settings.setValue("timeTotalRetryCount",gSet->tmTotalRetryCount);
+    settings.setValue("timeWaitReconnect",gSet->tmWaitReconnect);
+    settings.setValue("suppressMsgBox",gSet->suppressMsgBox);
+    settings.setValue("restoreCSV",gSet->restoreCSV);
+    settings.setValue("plotVerticalSize",gSet->plotVerticalSize);
+    settings.setValue("plotShowScatter",gSet->plotShowScatter);
+    settings.setValue("plotAntialiasing",gSet->plotAntialiasing);
+    settings.setValue("savedAuxDir",gSet->savedAuxDir);
     settings.endGroup();
 }
 
-QString getOpenFileNameD ( QWidget * parent, const QString & caption, const QString & dir,
-                           const QString & filter, QString * selectedFilter,
-                           QFileDialog::Options options)
+QString getOpenFileNameD (QWidget * parent, const QString & caption, const QString & dir,
+                          const QString & filter, QString * selectedFilter)
 {
-    return QFileDialog::getOpenFileName(parent,caption,dir,filter,selectedFilter,options);
+    QFileDialog::Options opts = 0;
+    if (dontUseNativeFileDialog)
+        opts = QFileDialog::DontUseNativeDialog | QFileDialog::DontUseCustomDirectoryIcons;
+
+    QFileDialog dialog(parent,caption,dir,filter);
+    dialog.setOptions(opts);
+    dialog.setAcceptMode(QFileDialog::AcceptOpen);
+    dialog.setFileMode(QFileDialog::ExistingFile);
+    if (openFileDialogSize.isValid())
+        dialog.resize(openFileDialogSize);
+
+    QString res;
+    if (selectedFilter && !selectedFilter->isEmpty())
+        dialog.selectNameFilter(*selectedFilter);
+    if (dialog.exec() == QDialog::Accepted) {
+        if (selectedFilter)
+            *selectedFilter = dialog.selectedNameFilter();
+        if (!dialog.selectedFiles().isEmpty())
+            res = dialog.selectedFiles().first();
+    }
+
+    openFileDialogSize = dialog.size();
+    return res;
 }
 
-QStringList getOpenFileNamesD ( QWidget * parent, const QString & caption, const QString & dir,
-                                const QString & filter, QString * selectedFilter,
-                                QFileDialog::Options options)
+QStringList getOpenFileNamesD (QWidget * parent, const QString & caption, const QString & dir,
+                               const QString & filter, QString * selectedFilter)
 {
-    return QFileDialog::getOpenFileNames(parent,caption,dir,filter,selectedFilter,options);
+    QFileDialog::Options opts = 0;
+    if (dontUseNativeFileDialog)
+        opts = QFileDialog::DontUseNativeDialog | QFileDialog::DontUseCustomDirectoryIcons;
+
+    QFileDialog dialog(parent,caption,dir,filter);
+    dialog.setOptions(opts);
+    dialog.setAcceptMode(QFileDialog::AcceptOpen);
+    dialog.setFileMode(QFileDialog::ExistingFiles);
+    if (openFileDialogSize.isValid())
+        dialog.resize(openFileDialogSize);
+
+    QStringList res;
+    if (selectedFilter && !selectedFilter->isEmpty())
+        dialog.selectNameFilter(*selectedFilter);
+    if (dialog.exec() == QDialog::Accepted) {
+        if (selectedFilter)
+            *selectedFilter = dialog.selectedNameFilter();
+         res = dialog.selectedFiles();
+    }
+
+    openFileDialogSize = dialog.size();
+    return res;
 }
 
-QString getSaveFileNameD ( QWidget * parent, const QString & caption, const QString & dir,
-                           const QString & filter, QString * selectedFilter,
-                           QFileDialog::Options options)
+QStringList getSuffixesFromFilter(const QString& filter)
 {
-    return QFileDialog::getSaveFileName(parent,caption,dir,filter,selectedFilter,options);
+    QStringList res;
+    res.clear();
+    if (filter.isEmpty()) return res;
+
+    QStringList filters = filter.split(";;",QString::SkipEmptyParts);
+    if (filters.isEmpty()) return res;
+
+    for (int i=0;i<filters.count();i++) {
+        QString ex = filters.at(i);
+
+        if (ex.isEmpty()) continue;
+
+        ex.remove(QRegExp("^.*\\("));
+        ex.remove(QRegExp("\\).*$"));
+        ex.remove(QRegExp("^.*\\."));
+        res.append(ex.split(" "));
+    }
+
+    return res;
 }
 
-QString	getExistingDirectoryD ( QWidget * parent, const QString & caption, const QString & dir,
-                                QFileDialog::Options options)
+QString getSaveFileNameD (QWidget * parent, const QString & caption, const QString & dir,
+                          const QString & filter, QString * selectedFilter, QString preselectFileName )
 {
-    return QFileDialog::getExistingDirectory(parent,caption,dir,options);
+    QFileDialog::Options opts = 0;
+    if (dontUseNativeFileDialog)
+        opts = QFileDialog::DontUseNativeDialog | QFileDialog::DontUseCustomDirectoryIcons;
+
+    QFileDialog dialog(parent,caption,dir,filter);
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setOptions(opts);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+    if (saveFileDialogSize.isValid())
+        dialog.resize(saveFileDialogSize);
+
+    if (selectedFilter && !selectedFilter->isEmpty())
+        dialog.selectNameFilter(*selectedFilter);
+
+    if (!preselectFileName.isEmpty())
+        dialog.selectFile(preselectFileName);
+
+    QString res;
+    if (dialog.exec()==QDialog::Accepted) {
+        QString userFilter = dialog.selectedNameFilter();
+        if (selectedFilter!=nullptr)
+            *selectedFilter=userFilter;
+        if (!userFilter.isEmpty())
+            dialog.setDefaultSuffix(getSuffixesFromFilter(userFilter).first());
+
+        if (!dialog.selectedFiles().isEmpty())
+            res = dialog.selectedFiles().first();
+    }
+
+    saveFileDialogSize = dialog.size();
+    return res;
+}
+
+QString	getExistingDirectoryD ( QWidget * parent, const QString & caption, const QString & dir, QFileDialog::Options options )
+{
+    QFileDialog::Options opts = options;
+    if (dontUseNativeFileDialog)
+        opts = QFileDialog::DontUseNativeDialog | QFileDialog::DontUseCustomDirectoryIcons;
+
+    return QFileDialog::getExistingDirectory(parent,caption,dir,opts);
 }
