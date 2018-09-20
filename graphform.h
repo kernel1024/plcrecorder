@@ -25,7 +25,6 @@ public:
     explicit CGraphForm(QWidget *parent = nullptr);
     ~CGraphForm();
 
-    void setupGraphs(const CWPList &wp, bool lazyModification = false);
     void addData(const CWPList &wp, const QDateTime &time, bool noReplot = false);
 
 private:
@@ -37,6 +36,8 @@ private:
     void createCursorSignal(CGraphForm::CursorType cursor, double timestamp);
     QCPRange getTotalKeyRange();
     void updateScrollBarRange();
+    void setupGraphs(const CWPList &wp);
+    void clearDataEx(bool clearOnlyCursors);
 
 protected:
     virtual void closeEvent(QCloseEvent * event);

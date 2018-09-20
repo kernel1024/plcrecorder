@@ -9,5 +9,10 @@
         <file alias="reload">img/reload.png</file>
         <file alias="save">img/save.png</file>
         <file alias="icon40">img/icon40.png</file>
+        <file alias="application-exit">img/application-exit.png</file>
+        <file alias="configure">img/configure.png</file>
+        <file alias="trash-empty">img/trash-empty.png</file>
+        <file alias="zoom">img/zoom.png</file>
+        <file alias="wave">img/wave.png</file>
     </qresource>
 </RCC>

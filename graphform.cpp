@@ -39,27 +39,28 @@ CGraphForm::~CGraphForm()
     delete ui;
 }
 
-void CGraphForm::setupGraphs(const CWPList &wp, bool lazyModification)
+void CGraphForm::setupGraphs(const CWPList &wp)
 {
-/*    if (lazyModification
-            && !watchpoints.isEmpty()
-            && wp) {
-        // TODO: handle adding data without change existing watchpoints
-        for (int i=0;i<watchpoints.count();i++) {
+    bool lazyModification = ((wp.count()>watchpoints.count()) &&  // new WP added, check old WPs
+                             (watchpoints == wp.mid(0,watchpoints.count()))); // old WPs still here, new WPs added to the end
+    clearDataEx(lazyModification);
 
+    QCPRange xRange(qQNaN(),qQNaN());
+    int idx = 0;
+    for (int i=0;i<wp.count();i++) {
+        // skip timers and counters, date/time types
+        if (!validArea.contains(wp.at(i).varea) || !gSet->plcIsPlottableType(wp.at(i))) continue;
+
+        if (lazyModification && i<watchpoints.count()) {
+            // Copy range from initialized graph
+            if (!QCPRange::validRange(xRange))
+                xRange = ui->plot->graph(idx)->keyAxis()->range();
+            // skip old WPs initialization
+            idx++;
+            continue;
         }
 
-    }*/
-    clearData();
-    watchpoints = wp;
-
-    double time = static_cast<double>(QDateTime::currentDateTime().toMSecsSinceEpoch())/1000.0;
-
-    ui->plot->plotLayout()->clear();
-    int idx = 0;
-
-    for (int i=0;i<wp.count();i++) {
-        if (!validArea.contains(wp.at(i).varea) || !gSet->plcIsPlottableType(wp.at(i))) continue;
+        // default value ranges
         double yMin, yMax;
         switch (wp.at(i).vtype) {
             case CWP::S7BOOL:
@@ -76,24 +77,29 @@ void CGraphForm::setupGraphs(const CWPList &wp, bool lazyModification)
                 yMax = 50.0;
                 break;
             default:
+                idx++;
                 continue; // Special type, no visualization
         }
 
         QCPLayoutGrid* grid = ui->plot->plotLayout();
 
+        // create axis grid, placed in new layout element
         QCPAxisRect* rect = new QCPAxisRect(ui->plot,false);
         grid->addElement(idx,0,rect);
 
+        // grid geometry, affects scrolling and sizeHint's
         grid->setRowSpacing(0);
         rect->setMinimumMargins(QMargins(0,0,0,0));
         rect->setMinimumSize(100,gSet->plotVerticalSize);
         rect->setMaximumSize(getScreenWidth(),gSet->plotVerticalSize);
 
+        // enable drag and zoom for xAxis
         QCPAxis* xAxis = rect->addAxis(QCPAxis::atTop);
         QCPAxis* yAxis = rect->addAxis(QCPAxis::atLeft);
         rect->setRangeDragAxes(xAxis,nullptr);
         rect->setRangeZoomAxes(xAxis,nullptr);
 
+        // WP name as yAxis title
         QFont font = yAxis->labelFont();
         font.setPointSize(6);
         yAxis->setLabelFont(font);
@@ -101,6 +107,7 @@ void CGraphForm::setupGraphs(const CWPList &wp, bool lazyModification)
         QString yLabel = fm.elidedText(wp.at(i).label,Qt::ElideRight,gSet->plotVerticalSize);
         yAxis->setLabel(QString("%1\n%2").arg(yLabel,gSet->plcGetAddrName(wp.at(i))));
 
+        // value ticks for analogue WPs at yAxis
         if (wp.at(i).vtype==CWP::S7BOOL)
             yAxis->setTickLabels(false);
         else {
@@ -108,6 +115,8 @@ void CGraphForm::setupGraphs(const CWPList &wp, bool lazyModification)
             yAxis->setTickLabelSide(QCPAxis::lsInside);
             yAxis->setTickLabelFont(font);
         }
+
+        // date/time ticks for xAxis
         if (idx==0) {
             QSharedPointer<QCPAxisTickerDateTime> dateTicker(new QCPAxisTickerDateTime);
             dateTicker->setDateTimeFormat("h:mm:ss.zzz\nd.MM.yyyy");
@@ -119,6 +128,7 @@ void CGraphForm::setupGraphs(const CWPList &wp, bool lazyModification)
         xAxis->grid()->setVisible(true);
         yAxis->grid()->setVisible(true);
 
+        // graph parameters
         QCPGraph* graph = ui->plot->addGraph(xAxis,yAxis);
         graph->setAntialiased(gSet->plotAntialiasing);
         graph->setAdaptiveSampling(true);
@@ -126,30 +136,42 @@ void CGraphForm::setupGraphs(const CWPList &wp, bool lazyModification)
         if (gSet->plotShowScatter)
             graph->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssPlus));
 
-        xAxis->setRange(time,time+60);
+        // visible graph xRange, 1 min for complete init, copy from old WPs for lazy init
+        if (lazyModification && QCPRange::validRange(xRange))
+            xAxis->setRange(xRange);
+        else {
+            double time = static_cast<double>(QDateTime::currentDateTime().toMSecsSinceEpoch())/1000.0;
+            xAxis->setRange(time,time+60);
+        }
 
+        // default yRange for data type
         double yRange = abs(yMax-yMin);
         yAxis->setRange(yMin-(yRange*0.1),yMax+(yRange*0.1));
 
+        // handle xAxis drag
         connect(xAxis,SIGNAL(rangeChanged(QCPRange)),this,SLOT(plotRangeChanged(QCPRange)));
 
         idx++;
     }
     ui->plot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectPlottables);
+
+    watchpoints = wp;
 }
 
 void CGraphForm::addData(const CWPList &wp, const QDateTime& time, bool noReplot)
 {
-    if (wp.count()!=watchpoints.count()) {
+    if (wp!=watchpoints) { // comparing by uuid, WP must be same count, same order
         emit logMessage(trUtf8("Variables list changed. Initializing graphs."));
-        setupGraphs(wp,true);
+        setupGraphs(wp);
     }
 
     double key = static_cast<double>(time.toMSecsSinceEpoch())/1000.0;
     int idx = 0;
 
     for (int i=0;i<wp.count();i++) {
+        // skip timers and counters, date/time types
         if (!validArea.contains(wp.at(i).varea) || !gSet->plcIsPlottableType(wp.at(i))) continue;
+
         double val = 0.0;
         QVariant dt = wp.at(i).data;
         switch (wp.at(i).vtype) {
@@ -184,6 +206,7 @@ void CGraphForm::addData(const CWPList &wp, const QDateTime& time, bool noReplot
         QCPGraph* graph = ui->plot->graph(idx);
         graph->addData(key,val);
 
+        // dynamically correct yAxis range for analogue WPs
         if (wp.at(i).vtype!=CWP::S7BOOL) {
             QCPAxis* yAxis = graph->valueAxis();
             bool foundRange;
@@ -199,7 +222,7 @@ void CGraphForm::addData(const CWPList &wp, const QDateTime& time, bool noReplot
         idx++;
     }
 
-    // Check visible range
+    // Check visible range, move range if needed
     if (ui->checkAutoScroll->isChecked() && !ui->plot->axisRect(0)->axis(QCPAxis::atTop)->range().contains(key)) {
         double size = ui->plot->axisRect(0)->axis(QCPAxis::atTop)->range().size();
         double start = key-(size*0.1);
@@ -207,6 +230,7 @@ void CGraphForm::addData(const CWPList &wp, const QDateTime& time, bool noReplot
             ui->plot->axisRect(i)->axis(QCPAxis::atTop)->setRange(start,start+size);
     }
 
+    // silent update (file loading) enabled
     if (!noReplot) {
         updateScrollBarRange();
         ui->plot->replot();
@@ -247,15 +271,35 @@ void CGraphForm::showEvent(QShowEvent *)
 
 void CGraphForm::clearData()
 {
-    ui->plot->clearGraphs();
-    ui->plot->plotLayout()->clear();
+    clearDataEx(false);
+}
 
+void CGraphForm::clearDataEx(bool clearOnlyCursors)
+{
     if (runningCursor!=nullptr) ui->plot->removeItem(runningCursor);
     if (leftCursor!=nullptr) ui->plot->removeItem(leftCursor);
     if (rightCursor!=nullptr) ui->plot->removeItem(rightCursor);
     runningCursor = nullptr;
     leftCursor = nullptr;
     rightCursor = nullptr;
+
+    ui->listRunning->clear();
+    ui->listRunning->setColumnCount(0);
+    ui->listRunning->setRowCount(0);
+    ui->listLeft->clear();
+    ui->listLeft->setColumnCount(0);
+    ui->listLeft->setRowCount(0);
+    ui->listRight->clear();
+    ui->listRight->setColumnCount(0);
+    ui->listRight->setRowCount(0);
+
+    if (clearOnlyCursors) {
+        ui->plot->replot();
+        return;
+    }
+
+    ui->plot->clearGraphs();
+    ui->plot->plotLayout()->clear();
 
     ui->plot->replot();
 
@@ -322,8 +366,8 @@ void CGraphForm::plotMouseMove(QMouseEvent *event)
     QCPAxisRect *rect = ui->plot->axisRectAt(event->localPos());
     if (rect!=nullptr) {
 
+        // create 'cursors' layer if needed
         QCPLayer *cursors = ui->plot->layer("cursor");
-
         if (cursors==nullptr) {
             ui->plot->addLayer("cursor");
             ui->plot->setCurrentLayer("main");
@@ -332,6 +376,7 @@ void CGraphForm::plotMouseMove(QMouseEvent *event)
 
         double x = rect->axis(QCPAxis::atTop)->pixelToCoord(event->localPos().x());
 
+        // cursor type selection
         QCPItemStraightLine* cursor;
         if (event->modifiers() & Qt::ControlModifier) cursor = leftCursor;
         else if (event->modifiers() & Qt::AltModifier) cursor = rightCursor;
@@ -340,6 +385,7 @@ void CGraphForm::plotMouseMove(QMouseEvent *event)
         if (cursor!=nullptr)
             ui->plot->removeItem(cursor);
 
+        // cursor init
         cursor = new QCPItemStraightLine(ui->plot);
         cursor->setLayer(cursors);
         cursor->setClipToAxisRect(false);
@@ -374,9 +420,9 @@ void CGraphForm::scrollBarMoved(int value)
             ui->plot->axisRectCount()<1) return;
 
     double newCenter = totalRange.lower + static_cast<double>(value);
-
     QCPRange currentRange = ui->plot->axisRect(0)->axis(QCPAxis::atTop)->range();
 
+    // check delta for recursion prevention
     if (qAbs(newCenter-currentRange.center()) > 0.05)
     {
         currentRange += newCenter - currentRange.center();
@@ -390,11 +436,11 @@ void CGraphForm::plotContextMenu(const QPoint &pos)
     QMenu cm(ui->plot);
 
     QAction* acm;
-    acm = cm.addAction(QIcon("zoom"),trUtf8("Zoom all"));
+    acm = cm.addAction(QIcon(":/zoom"),trUtf8("Zoom all"));
     connect(acm,&QAction::triggered,this,&CGraphForm::zoomAll);
     cm.addSeparator();
 
-    acm = cm.addAction(QIcon("trash-empty"),trUtf8("Clear plot"));
+    acm = cm.addAction(QIcon(":/trash-empty"),trUtf8("Clear plot"));
     connect(acm,&QAction::triggered,this,&CGraphForm::clearData);
 
     QPoint p = pos;
@@ -426,7 +472,13 @@ void CGraphForm::loadCSV()
     }
     int lineNum = 2;
     while (!in.atEnd()) {
-        s = in.readLine();
+        s = in.readLine().trimmed();
+
+        // skip empty lines and additional title lines
+        // this is support for merged files
+        if (s.isEmpty() ||
+                s.startsWith("\"Time\"; ")) continue;
+
         int idx = s.lastIndexOf("; ");
         if (idx<0) {
             QMessageBox::critical(this,trUtf8("PLC recorder error"),
@@ -466,9 +518,6 @@ void CGraphForm::loadCSV()
             f.close();
             return;
         }
-
-        if (lineNum==2)
-            setupGraphs(wp);
 
         addData(wp,dt,true);
         qApp->processEvents();
@@ -510,6 +559,7 @@ void CGraphForm::createCursorSignal(CGraphForm::CursorType cursor, double timest
     CWPList res = watchpoints;
     int idx = 0;
     for (int i=0;i<res.count();i++) {
+        // skip timers and counters, date/time types
         if (!validArea.contains(res.at(i).varea) || !gSet->plcIsPlottableType(res.at(i))) {
             res[i].data = QVariant();
             continue;
@@ -519,12 +569,14 @@ void CGraphForm::createCursorSignal(CGraphForm::CursorType cursor, double timest
         double data = 0.0;
         const QCPGraph* graph = ui->plot->graph(idx);
 
+        // find nearest value to cursor
         bool foundRange;
         QCPGraphDataContainer::const_iterator it = graph->data()->findBegin(timestamp);
         QCPRange dataRange = graph->getKeyRange(foundRange, QCP::sdBoth);
         if (foundRange &&
                 (it != graph->data()->constEnd()))
         {
+            // key must be inside actual graph
             if ((it->key > dataRange.lower) &&
                     (it->key < dataRange.upper)) {
                 data = it->value;
@@ -532,6 +584,7 @@ void CGraphForm::createCursorSignal(CGraphForm::CursorType cursor, double timest
             }
         }
 
+        // cast aquired data to our data types
         if (dataValid) {
             switch (watchpoints.at(i).vtype) {
                 case CWP::S7BOOL:
@@ -559,6 +612,7 @@ void CGraphForm::createCursorSignal(CGraphForm::CursorType cursor, double timest
         idx++;
     }
 
+    // cursor type selection
     QTableWidget* list = nullptr;
     QLabel* timeLabel = nullptr;
     switch (cursor) {
@@ -575,8 +629,10 @@ void CGraphForm::createCursorSignal(CGraphForm::CursorType cursor, double timest
             timeLabel = ui->lblTimeRight;
             break;
     }
+
     if (list!=nullptr && timeLabel!=nullptr) {
         QFontMetrics fm(list->font());
+        // cursor properties list initialization
         if (list->rowCount()!=res.count()) {
             list->clearContents();
             list->setRowCount(res.count());

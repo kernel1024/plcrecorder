@@ -276,8 +276,8 @@
   </action>
   <action name="actionQuit">
    <property name="icon">
-    <iconset theme="application-exit">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset resource="plcrecorder.qrc">
+     <normaloff>:/application-exit</normaloff>:/application-exit</iconset>
    </property>
    <property name="text">
     <string>&amp;Exit</string>
@@ -287,6 +287,10 @@
    </property>
   </action>
   <action name="actionSettings">
+   <property name="icon">
+    <iconset resource="plcrecorder.qrc">
+     <normaloff>:/configure</normaloff>:/configure</iconset>
+   </property>
    <property name="text">
     <string>Sett&amp;ings...</string>
    </property>
@@ -303,11 +307,6 @@
     <string>&amp;Force CSV rotation</string>
    </property>
   </action>
-  <action name="actionTimeouts">
-   <property name="text">
-    <string>&amp;Timeouts...</string>
-   </property>
-  </action>
   <action name="actionAbout">
    <property name="text">
     <string>&amp;About...</string>
@@ -319,8 +318,12 @@
    </property>
   </action>
   <action name="actionShowPlot">
+   <property name="icon">
+    <iconset resource="plcrecorder.qrc">
+     <normaloff>:/wave</normaloff>:/wave</iconset>
+   </property>
    <property name="text">
-    <string>Show signal plot</string>
+    <string>&amp;Show signal plot</string>
    </property>
   </action>
  </widget>
