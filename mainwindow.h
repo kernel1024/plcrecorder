@@ -76,6 +76,7 @@ public slots:
     void csvControl();
 
     void ctlAggregatedStart();
+    void ctlAggregatedStartForce();
     void ctlStop();
 
     void sysSIGPIPE();

@@ -88,7 +88,7 @@ MainWindow::MainWindow(QWidget *parent) :
     graph->hide();
     connect(ui->actionShowPlot,&QAction::triggered,graph,&CGraphForm::show);
 
-    connect(ui->btnConnect,&QPushButton::clicked,this,&MainWindow::ctlAggregatedStart);
+    connect(ui->btnConnect,&QPushButton::clicked,this,&MainWindow::ctlAggregatedStartForce);
     connect(ui->btnDisconnect,&QPushButton::clicked,this,&MainWindow::ctlStop);
     connect(ui->editAcqInterval,SIGNAL(valueChanged(int)),plc,SLOT(plcSetAcqInterval(int)),Qt::QueuedConnection);
 
@@ -134,7 +134,7 @@ MainWindow::MainWindow(QWidget *parent) :
     if (needToStart && (vtmodel->getCWPCount()>0)) {
         appendLog(trUtf8("Automatic reconnect after 10 sec from command prompt."));
         autoOnLogging = true;
-        QTimer::singleShot(10*1000,this,&MainWindow::ctlAggregatedStart);
+        QTimer::singleShot(10*1000,this,&MainWindow::ctlAggregatedStartForce);
     }
 
     connect(csvHandler,&CCSVHandler::errorMessage,[this](const QString& message){
@@ -511,12 +511,19 @@ void MainWindow::ctlAggregatedStart()
         agcRestartCounter = 0;
         return;
     }
+
     aggregatedStartActive = true;
     ui->btnDisconnect->setEnabled(true);
     connectPLC();
     emit plcStart();
     agcRestartCounter++;
     appendLog(trUtf8("Activating PLC connection request %1.").arg(agcRestartCounter));
+}
+
+void MainWindow::ctlAggregatedStartForce()
+{
+    agcRestartCounter = 0;
+    ctlAggregatedStart();
 }
 
 void MainWindow::ctlStop()
@@ -535,5 +542,5 @@ void MainWindow::sysSIGPIPE()
 {
     appendLog(trUtf8("SIGPIPE received. Force reconnect to PLC."));
     emit plcDisconnect();
-    ctlAggregatedStart();
+    ctlAggregatedStartForce();
 }
