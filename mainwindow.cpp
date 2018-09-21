@@ -317,10 +317,10 @@ void MainWindow::plcStartFailed()
     }
 }
 
-void MainWindow::plcErrorMsg(const QString &msg)
+void MainWindow::plcErrorMsg(const QString &msg, bool critical)
 {
     appendLog(msg);
-    if (!gSet->suppressMsgBox)
+    if (critical && !gSet->suppressMsgBox)
         QMessageBox::critical(this,trUtf8("PLC recorder error"),msg);
 }
 

@@ -25,7 +25,8 @@ CGlobal::CGlobal(QObject *parent) :
     savedAuxDir = QString();
 }
 
-QString CGlobal::plcGetAddrName(const CWP& aWp) {
+QString CGlobal::plcGetAddrName(const CWP& aWp)
+{
     CWP wp = aWp;
     QString res;
     res.clear();
@@ -75,7 +76,8 @@ QString CGlobal::plcGetAddrName(const CWP& aWp) {
     return res;
 }
 
-QString CGlobal::plcGetTypeName(const CWP& aWp) {
+QString CGlobal::plcGetTypeName(const CWP& aWp)
+{
     if (aWp.varea==CWP::Timers)
         return QString("TIMER");
     if (aWp.varea==CWP::Counters)
@@ -96,7 +98,8 @@ QString CGlobal::plcGetTypeName(const CWP& aWp) {
     }
 }
 
-QStringList CGlobal::plcAvailableTypeNames() {
+QStringList CGlobal::plcAvailableTypeNames()
+{
     QStringList sl;
     sl << QString("BOOL");
     sl << QString("BYTE");
@@ -366,6 +369,8 @@ bool CGlobal::plcParseAddr(const QString &addr, CWP &wp)
 
 QString CGlobal::plcFormatActualValue(const CWP &wp)
 {
+    if (wp.data.isNull() || !wp.data.isValid()) return QString();
+    double data;
     switch (wp.vtype) {
         case CWP::S7BYTE:
             return trUtf8("0x%1").arg(wp.data.toInt(),2,16,QChar('0'));
@@ -381,6 +386,12 @@ QString CGlobal::plcFormatActualValue(const CWP &wp)
                 return trUtf8("%1").arg(wp.data.toTime().toString("hh:mm:ss.zzz"));
             else
                 return trUtf8("-%1").arg(wp.data.toTime().toString("hh:mm:ss.zzz"));
+        case CWP::S7REAL:
+            data = wp.data.toDouble();
+            if (qAbs(data)>1e6 || qAbs(data)<0.001)
+                return QString::number(data,'e',4);
+            else
+                return QString::number(data,'f',3);
         default:
             return wp.data.toString();
     }

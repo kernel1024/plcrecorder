@@ -57,7 +57,7 @@ public slots:
     void plcStarted();
     void plcStopped();
     void plcStartFailed();
-    void plcErrorMsg(const QString &msg);
+    void plcErrorMsg(const QString &msg, bool critical);
     void plcVariablesUpdatedConsistent(const CWPList& wp, const QDateTime& stm);
 
     void connectPLC();

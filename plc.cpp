@@ -48,7 +48,7 @@ CPLC::~CPLC()
 void CPLC::plcSetWatchpoints(const CWPList &aWatchpoints)
 {
     if (dptr->state!=splcDisconnected) {
-        emit plcError(trUtf8("You can add variables only in disconnected state."));
+        emit plcError(trUtf8("You can add variables only in disconnected state."),true);
         return;
     }
 
@@ -115,7 +115,7 @@ bool CPLCPrivate::rearrangeWatchpoints()
 void CPLC::plcSetAddress(const QString &Ip, int Rack, int Slot, int Timeout)
 {
     if (dptr->state!=splcDisconnected) {
-        emit plcError(trUtf8("Unable to change connection settings in online mode. Disconnect and try again."));
+        emit plcError(trUtf8("Unable to change connection settings in online mode. Disconnect and try again."),true);
         return;
     }
     dptr->ip = Ip;
@@ -132,14 +132,14 @@ void CPLC::plcSetAcqInterval(int Milliseconds)
 void CPLC::plcConnect()
 {
     if (dptr->state!=splcDisconnected) {
-        emit plcError(trUtf8("Unable to connect - connection is still active. Disconnect and try again."));
+        emit plcError(trUtf8("Unable to connect - connection is still active. Disconnect and try again."),true);
         return;
     }
 
     if (!dptr->rearrangeWatchpoints()) {
         emit plcError(trUtf8("Unable to parse and rearrange variable list.\n"
                              "Possible syntax error in one or more variable definitions.\n"
-                             "PLC connection was stopped."));
+                             "PLC connection was stopped."),true);
         return;
     }
 
@@ -167,7 +167,7 @@ void CPLC::plcConnect()
                         dptr->daveConn = nullptr;
                         dptr->daveIntf = nullptr;
                         dptr->fds.rfd = 0; dptr->fds.wfd = 0;
-                        emit plcError(trUtf8("Unable to connect to PLC."));
+                        emit plcError(trUtf8("Unable to connect to PLC."),false);
                     }
                 } else {
                     daveDisconnectAdapter(dptr->daveIntf);
@@ -175,20 +175,20 @@ void CPLC::plcConnect()
                     dptr->daveConn = nullptr;
                     dptr->daveIntf = nullptr;
                     dptr->fds.rfd = 0; dptr->fds.wfd = 0;
-                    emit plcError(trUtf8("Unable to connect to specified IP."));
+                    emit plcError(trUtf8("Unable to connect to specified IP."),false);
                 }
             } else {
                 closeSocket(dptr->fds.rfd);
                 dptr->daveConn = nullptr;
                 dptr->daveIntf = nullptr;
                 dptr->fds.rfd = 0; dptr->fds.wfd = 0;
-                emit plcError(trUtf8("Unable to create IF1 interface for PLC connection at specified IP."));
+                emit plcError(trUtf8("Unable to create IF1 interface for PLC connection at specified IP."),false);
             }
         } else {
             dptr->daveConn = nullptr;
             dptr->daveIntf = nullptr;
             dptr->fds.rfd = 0; dptr->fds.wfd = 0;
-            emit plcError(trUtf8("Unable to open socked to specified IP."));
+            emit plcError(trUtf8("Unable to open socked to specified IP."),false);
         }
         CSleep::sleep(static_cast<unsigned long>(dptr->tmWaitReconnect));
     }
@@ -199,11 +199,11 @@ void CPLC::plcStart()
 {
     if (dptr->mainClock==nullptr) return;
     if (dptr->state != splcConnected) {
-        emit plcError(trUtf8("Unable to start PLC recording. libnodave is not ready."));
+        emit plcError(trUtf8("Unable to start PLC recording. libnodave is not ready."),true);
         return;
     }
     if (dptr->pairings.isEmpty()) {
-        emit plcError(trUtf8("Variables is not parsed and prepared. Recording failure."));
+        emit plcError(trUtf8("Variables is not parsed and prepared. Recording failure."),true);
         emit plcStartFailed();
         return;
     }
@@ -216,7 +216,7 @@ void CPLC::plcStart()
 void CPLC::plcStop()
 {
     if (dptr->state != splcRecording) {
-        emit plcError(trUtf8("Unable to stop PLC recording, recording was not even started."));
+        emit plcError(trUtf8("Unable to stop PLC recording, recording was not even started."),true);
         return;
     }
     dptr->state = splcConnected;
@@ -227,7 +227,7 @@ void CPLC::plcStop()
 void CPLC::plcDisconnect()
 {
     if (dptr->state == splcDisconnected) {
-        emit plcError(trUtf8("Not connected to PLC."));
+        emit plcError(trUtf8("Not connected to PLC."),true);
         return;
     }
 
@@ -235,7 +235,7 @@ void CPLC::plcDisconnect()
         plcStop();
 
     if (dptr->state != splcConnected) {
-        emit plcError(trUtf8("Unable to stop PLC recording."));
+        emit plcError(trUtf8("Unable to stop PLC recording."),true);
         return;
     }
 
@@ -383,7 +383,7 @@ void CPLC::plcClock()
                     QString strMsg(daveStrerror(res));
                     plcStop();
                     emit plcError(trUtf8("Too many errors on active connection. Recording stopped. %1")
-                                  .arg(strMsg));
+                                  .arg(strMsg),true);
                 }
             } else
                 dptr->recErrorsCount = 0;

@@ -100,7 +100,7 @@ private:
     CPLCPrivate* dptr;
 
 signals:
-    void plcError(const QString& msg);
+    void plcError(const QString& msg, bool critical);
     void plcConnectFailed();
     void plcStartFailed();
     void plcOnConnect();
