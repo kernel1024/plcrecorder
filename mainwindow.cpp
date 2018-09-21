@@ -482,7 +482,6 @@ void MainWindow::csvControl()
 void MainWindow::plotControl()
 {
     if (cbPlot->isChecked()) {
-//        graph->setupGraphs(vtmodel->getCWPList());
         graph->show();
         cbPlot->setStyleSheet("background-color: blue; color: yellow; font: bold;");
     } else {

@@ -199,11 +199,11 @@ void CPLC::plcStart()
 {
     if (dptr->mainClock==nullptr) return;
     if (dptr->state != splcConnected) {
-        emit plcError(trUtf8("Unable to start PLC recording. libnodave is not ready."),true);
+        emit plcError(trUtf8("Unable to start PLC recording. libnodave is not ready."),false);
         return;
     }
     if (dptr->pairings.isEmpty()) {
-        emit plcError(trUtf8("Variables is not parsed and prepared. Recording failure."),true);
+        emit plcError(trUtf8("Variables is not parsed and prepared. Recording failure."),false);
         emit plcStartFailed();
         return;
     }
