@@ -19,9 +19,9 @@ CGraphForm::CGraphForm(QWidget *parent) :
     ui->setupUi(this);
 
     moveSplitterOnce = true;
-    runningCursor = nullptr;
-    leftCursor = nullptr;
-    rightCursor = nullptr;
+    runningCursor = NULL;
+    leftCursor = NULL;
+    rightCursor = NULL;
     watchpoints.clear();
 
     ui->plot->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -100,8 +100,8 @@ void CGraphForm::setupGraphs(const CWPList &wp)
         // enable drag and zoom for xAxis
         QCPAxis* xAxis = rect->addAxis(QCPAxis::atTop);
         QCPAxis* yAxis = rect->addAxis(QCPAxis::atLeft);
-        rect->setRangeDragAxes(xAxis,nullptr);
-        rect->setRangeZoomAxes(xAxis,nullptr);
+        rect->setRangeDragAxes(xAxis,NULL);
+        rect->setRangeZoomAxes(xAxis,NULL);
 
         // WP name as yAxis title
         QFont font = yAxis->labelFont();
@@ -280,12 +280,12 @@ void CGraphForm::clearData()
 
 void CGraphForm::clearDataEx(bool clearOnlyCursors)
 {
-    if (runningCursor!=nullptr) ui->plot->removeItem(runningCursor);
-    if (leftCursor!=nullptr) ui->plot->removeItem(leftCursor);
-    if (rightCursor!=nullptr) ui->plot->removeItem(rightCursor);
-    runningCursor = nullptr;
-    leftCursor = nullptr;
-    rightCursor = nullptr;
+    if (runningCursor!=NULL) ui->plot->removeItem(runningCursor);
+    if (leftCursor!=NULL) ui->plot->removeItem(leftCursor);
+    if (rightCursor!=NULL) ui->plot->removeItem(rightCursor);
+    runningCursor = NULL;
+    leftCursor = NULL;
+    rightCursor = NULL;
 
     ui->listRunning->clear();
     ui->listRunning->setColumnCount(0);
@@ -358,7 +358,7 @@ void CGraphForm::plotRangeChanged(const QCPRange &newRange)
     }
 
     QCPRange totalRange = getTotalKeyRange();
-    if (xAxis!=nullptr && // null axis sender when updating from scrollbar
+    if (xAxis!=NULL && // null axis sender when updating from scrollbar
             QCPRange::validRange(totalRange)) {
         ui->horizontalScrollBar->setValue(static_cast<int>(newRange.center()-totalRange.lower));
         ui->horizontalScrollBar->setPageStep(static_cast<int>(newRange.size()));
@@ -370,11 +370,11 @@ void CGraphForm::plotMouseMove(QMouseEvent *event)
     QPointF pos(event->pos());
 
     QCPAxisRect *rect = ui->plot->axisRectAt(pos);
-    if (rect!=nullptr) {
+    if (rect!=NULL) {
 
         // create 'cursors' layer if needed
         QCPLayer *cursors = ui->plot->layer("cursor");
-        if (cursors==nullptr) {
+        if (cursors==NULL) {
             ui->plot->addLayer("cursor");
             ui->plot->setCurrentLayer("main");
             cursors = ui->plot->layer("cursor");
@@ -388,7 +388,7 @@ void CGraphForm::plotMouseMove(QMouseEvent *event)
         else if (event->modifiers() & Qt::AltModifier) cursor = rightCursor;
         else cursor = runningCursor;
 
-        if (cursor!=nullptr)
+        if (cursor!=NULL)
             ui->plot->removeItem(cursor);
 
         // cursor init
@@ -619,8 +619,8 @@ void CGraphForm::createCursorSignal(CGraphForm::CursorType cursor, double timest
     }
 
     // cursor type selection
-    QTableWidget* list = nullptr;
-    QLabel* timeLabel = nullptr;
+    QTableWidget* list = NULL;
+    QLabel* timeLabel = NULL;
     switch (cursor) {
         case ctRunning:
             list = ui->listRunning;
@@ -636,7 +636,7 @@ void CGraphForm::createCursorSignal(CGraphForm::CursorType cursor, double timest
             break;
     }
 
-    if (list!=nullptr && timeLabel!=nullptr) {
+    if (list!=NULL && timeLabel!=NULL) {
         QFontMetrics fm(list->font());
         // cursor properties list initialization
         if (list->rowCount()!=res.count()) {

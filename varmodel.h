@@ -14,7 +14,7 @@ class CVarDelegate : public QItemDelegate
 {
     Q_OBJECT
 public:
-    explicit CVarDelegate(QObject *parent = nullptr);
+    explicit CVarDelegate(QObject *parent = 0);
     QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option,
                           const QModelIndex &index) const;
 

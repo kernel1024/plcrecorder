@@ -566,7 +566,7 @@ QString getSaveFileNameD (QWidget * parent, const QString & caption, const QStri
     QString res;
     if (dialog.exec()==QDialog::Accepted) {
         QString userFilter = dialog.selectedNameFilter();
-        if (selectedFilter!=nullptr)
+        if (selectedFilter!=NULL)
             *selectedFilter=userFilter;
         if (!userFilter.isEmpty())
             dialog.setDefaultSuffix(getSuffixesFromFilter(userFilter).first());

@@ -13,7 +13,7 @@ class CSettingsDialog : public QDialog
     Q_OBJECT
     
 public:
-    explicit CSettingsDialog(QWidget *parent = nullptr);
+    explicit CSettingsDialog(QWidget *parent = NULL);
     ~CSettingsDialog();
 
     void setParams(const QString& outputDir, const QString& fileTemplate, int tcpTimeout,

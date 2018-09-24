@@ -21,7 +21,7 @@ public:
         ctRight = 3
     };
 
-    explicit CGraphForm(QWidget *parent = nullptr);
+    explicit CGraphForm(QWidget *parent = 0);
     ~CGraphForm();
 
     void addData(const CWPList &wp, const QDateTime &time, bool noReplot = false);

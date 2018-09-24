@@ -10,7 +10,7 @@ CCSVHandler::CCSVHandler(QObject *parent) : QObject(parent)
 
 void CCSVHandler::addData(const CWPList &wp, const QDateTime &stm)
 {
-    if (csvLog.device()!=nullptr) {
+    if (csvLog.device()!=NULL) {
         if (!csvHasHeader) {
             QString hdr = trUtf8("\"Time\"; ");
             for (int i=0;i<wp.count();i++) {
@@ -67,13 +67,13 @@ bool CCSVHandler::rotateFile()
     csvLog.setCodec("Windows-1251");
     csvHasHeader = false;
     emit appendLog(trUtf8("CSV rotation was successful."));
-    return (csvLog.device()!=nullptr);
+    return (csvLog.device()!=NULL);
 }
 
 void CCSVHandler::timerSync()
 {
     // reset cache
-    if (csvLog.device()!=nullptr)
+    if (csvLog.device()!=NULL)
         csvLog.flush();
 
     // rotate csv at 0:00
@@ -86,10 +86,10 @@ void CCSVHandler::timerSync()
 
 void CCSVHandler::stopClose()
 {
-    if (csvLog.device()!=nullptr) {
+    if (csvLog.device()!=NULL) {
         csvLog.flush();
         csvLog.device()->close();
-        csvLog.setDevice(nullptr);
+        csvLog.setDevice(NULL);
         emit appendLog(trUtf8("CSV recording stopped. File closed."));
     }
 }

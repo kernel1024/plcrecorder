@@ -28,14 +28,14 @@ CPLC::CPLC(QObject *parent) :
     dptr->tmMaxConnectRetryCount = 1;
     dptr->tmWaitReconnect = 2;
 
-    dptr->daveIntf = nullptr;
-    dptr->daveConn = nullptr;
+    dptr->daveIntf = NULL;
+    dptr->daveConn = NULL;
 
     dptr->watchpoints.clear();
 
-    dptr->mainClock = nullptr;
-    dptr->resClock = nullptr;
-    dptr->infClock = nullptr;
+    dptr->mainClock = NULL;
+    dptr->resClock = NULL;
+    dptr->infClock = NULL;
 
     dptr->rearrangeWatchpoints();
 }
@@ -151,10 +151,10 @@ void CPLC::plcConnect()
             char ifname[63];
             strcpy(ifname,"IF1");
             dptr->daveIntf = daveNewInterface(dptr->fds,ifname,0,daveProtoISOTCP, daveSpeed187k);
-            if (dptr->daveIntf != nullptr) {
+            if (dptr->daveIntf != NULL) {
                 daveSetTimeout(dptr->daveIntf,dptr->netTimeout);
                 dptr->daveConn = daveNewConnection(dptr->daveIntf,0,dptr->rack,dptr->slot);
-                if (dptr->daveConn != nullptr) {
+                if (dptr->daveConn != NULL) {
                     int res = daveConnectPLC(dptr->daveConn);
                     if (res == 0) {
                         dptr->state = splcConnected;
@@ -164,29 +164,29 @@ void CPLC::plcConnect()
                         daveDisconnectPLC(dptr->daveConn);
                         daveDisconnectAdapter(dptr->daveIntf);
                         closeSocket(dptr->fds.rfd);
-                        dptr->daveConn = nullptr;
-                        dptr->daveIntf = nullptr;
+                        dptr->daveConn = NULL;
+                        dptr->daveIntf = NULL;
                         dptr->fds.rfd = 0; dptr->fds.wfd = 0;
                         emit plcError(trUtf8("Unable to connect to PLC."),false);
                     }
                 } else {
                     daveDisconnectAdapter(dptr->daveIntf);
                     closeSocket(dptr->fds.rfd);
-                    dptr->daveConn = nullptr;
-                    dptr->daveIntf = nullptr;
+                    dptr->daveConn = NULL;
+                    dptr->daveIntf = NULL;
                     dptr->fds.rfd = 0; dptr->fds.wfd = 0;
                     emit plcError(trUtf8("Unable to connect to specified IP."),false);
                 }
             } else {
                 closeSocket(dptr->fds.rfd);
-                dptr->daveConn = nullptr;
-                dptr->daveIntf = nullptr;
+                dptr->daveConn = NULL;
+                dptr->daveIntf = NULL;
                 dptr->fds.rfd = 0; dptr->fds.wfd = 0;
                 emit plcError(trUtf8("Unable to create IF1 interface for PLC connection at specified IP."),false);
             }
         } else {
-            dptr->daveConn = nullptr;
-            dptr->daveIntf = nullptr;
+            dptr->daveConn = NULL;
+            dptr->daveIntf = NULL;
             dptr->fds.rfd = 0; dptr->fds.wfd = 0;
             emit plcError(trUtf8("Unable to open socked to specified IP."),false);
         }
@@ -197,7 +197,7 @@ void CPLC::plcConnect()
 
 void CPLC::plcStart()
 {
-    if (dptr->mainClock==nullptr) return;
+    if (dptr->mainClock==NULL) return;
     if (dptr->state != splcConnected) {
         emit plcError(trUtf8("Unable to start PLC recording. libnodave is not ready."),false);
         return;
@@ -242,8 +242,8 @@ void CPLC::plcDisconnect()
     daveDisconnectPLC(dptr->daveConn);
     daveDisconnectAdapter(dptr->daveIntf);
     closeSocket(dptr->fds.rfd);
-    dptr->daveConn = nullptr;
-    dptr->daveIntf = nullptr;
+    dptr->daveConn = NULL;
+    dptr->daveIntf = NULL;
     dptr->fds.rfd = 0; dptr->fds.wfd = 0;
 
     dptr->state = splcDisconnected;
@@ -272,7 +272,7 @@ void CPLC::correctToThread()
 void CPLC::plcClock()
 {
     if (dptr->state!=splcRecording) return;
-    if (dptr->mainClock==nullptr) return;
+    if (dptr->mainClock==NULL) return;
     if (!dptr->clockInterlock.tryLock()) {
         if (dptr->mainClock->interval()>0)
             dptr->skippedTicks++;
@@ -290,7 +290,7 @@ void CPLC::plcClock()
         if ((area!=daveDB) && (area!=daveDI))
             db = 0;
 
-        int res = daveReadBytes(dptr->daveConn,area,db,ofs,sz,nullptr);
+        int res = daveReadBytes(dptr->daveConn,area,db,ofs,sz,NULL);
         if (res==0) {
             for (int j=0;j<dptr->pairings.at(i).items.count();j++) {
                 int idx = dptr->pairings.at(i).items.at(j);
@@ -481,7 +481,7 @@ CPairing::CPairing()
     sz = 0;
     ofs = -1;
     db = -1;
-    wlist = nullptr;
+    wlist = NULL;
     area = CWP::NoArea;
 }
 
@@ -556,7 +556,7 @@ void CPairing::calcSize()
     sz = 0;
     ofs = -1;
     cnt = items.count();
-    if (wlist==nullptr) {
+    if (wlist==NULL) {
         qDebug() << "ERROR: call calcSize on uninitialized pairing list";
         return;
     }

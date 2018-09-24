@@ -6,11 +6,11 @@
 #include <signal.h>
 #endif
 
-static MainWindow* mw = nullptr;
+static MainWindow* mw = NULL;
 
 #ifdef LINUX
 void sig_handler(int) {
-    if (mw!=nullptr)
+    if (mw!=NULL)
         QMetaObject::invokeMethod(mw,"sysSIGPIPE");
 }
 #endif
@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
     sigemptyset(&pipe.sa_mask);
     pipe.sa_flags = 0;
     pipe.sa_flags |= SA_RESTART;
-    sigaction(SIGPIPE, &pipe, nullptr);
+    sigaction(SIGPIPE, &pipe, NULL);
 #endif
     qRegisterMetaType<CWP>("CWP");
     qRegisterMetaType<CWPList>("CWPList");

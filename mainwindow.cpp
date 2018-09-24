@@ -10,7 +10,7 @@
 
 #define PLR_VERSION 2
 
-CGlobal *gSet = nullptr;
+CGlobal *gSet = NULL;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -207,7 +207,7 @@ void MainWindow::loadConnectionFromFile(const QString &fname)
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    if (gSet!=nullptr)
+    if (gSet!=NULL)
         gSet->saveSettings();
     event->accept();
 }
@@ -547,7 +547,7 @@ void MainWindow::ctlAggregatedStartForce()
 
 void MainWindow::ctlStop()
 {
-    if (qobject_cast<QAbstractButton *>(sender())!=nullptr)
+    if (qobject_cast<QAbstractButton *>(sender())!=NULL)
         autoOnLogging = false;
 
     if (aggregatedStartActive)

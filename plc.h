@@ -93,7 +93,7 @@ public:
         splcConnected,
         splcRecording
     };
-    explicit CPLC(QObject *parent = nullptr);
+    explicit CPLC(QObject *parent = NULL);
     virtual ~CPLC();
 
 private:

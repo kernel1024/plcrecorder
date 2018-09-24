@@ -24,7 +24,7 @@ public:
 
     // -------------------------------------------------
 
-    explicit CGlobal(QObject *parent = nullptr);
+    explicit CGlobal(QObject *parent = 0);
 
     QString plcGetAddrName(const CWP& aWp);
     QString plcGetTypeName(const CWP& aWp);
@@ -40,19 +40,19 @@ public:
 
 extern CGlobal* gSet;
 
-QString getOpenFileNameD ( QWidget * parent = nullptr, const QString & caption = QString(),
+QString getOpenFileNameD ( QWidget * parent = NULL, const QString & caption = QString(),
                            const QString & dir = QString(), const QString & filter = QString(),
-                           QString * selectedFilter = nullptr);
+                           QString * selectedFilter = NULL);
 
-QStringList getOpenFileNamesD ( QWidget * parent = nullptr, const QString & caption = QString(),
+QStringList getOpenFileNamesD ( QWidget * parent = NULL, const QString & caption = QString(),
                                const QString & dir = QString(), const QString & filter = QString(),
-                               QString * selectedFilter = nullptr);
+                               QString * selectedFilter = NULL);
 
-QString getSaveFileNameD (QWidget * parent = nullptr, const QString & caption = QString(),
+QString getSaveFileNameD (QWidget * parent = NULL, const QString & caption = QString(),
                           const QString & dir = QString(), const QString & filter = QString(),
-                          QString * selectedFilter = nullptr, QString preselectFileName = QString());
+                          QString * selectedFilter = NULL, QString preselectFileName = QString());
 
-QString	getExistingDirectoryD ( QWidget * parent = nullptr, const QString & caption = QString(),
+QString	getExistingDirectoryD ( QWidget * parent = NULL, const QString & caption = QString(),
                                 const QString & dir = QString(),
                                 QFileDialog::Options options = QFileDialog::ShowDirsOnly);
 #endif // CGLOBAL_H

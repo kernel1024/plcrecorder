@@ -9,15 +9,15 @@
 CVarDelegate::CVarDelegate(QObject *parent) :
     QItemDelegate(parent)
 {
-    vmodel = nullptr;
+    vmodel = NULL;
     editEnabled = true;
 }
 
 QWidget *CVarDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &, const QModelIndex &index) const
 {
-    if (!index.isValid()) return nullptr;
-    if (!editEnabled) return nullptr;
-    if ((index.row()<0) || (index.row()>=index.model()->rowCount())) return nullptr;
+    if (!index.isValid()) return NULL;
+    if (!editEnabled) return NULL;
+    if ((index.row()<0) || (index.row()>=index.model()->rowCount())) return NULL;
     if (index.column()==0)
         return new QLineEdit(parent);
     else if (index.column()==1)
@@ -25,13 +25,13 @@ QWidget *CVarDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem 
     else if (index.column()==2)
         return new QComboBox(parent);
     else if (index.column()==3)
-        return nullptr; // read-only column
-    return nullptr;
+        return NULL; // read-only column
+    return NULL;
 }
 
 void CVarDelegate::setEditorData(QWidget *editor, const QModelIndex &index) const
 {
-    if (vmodel==nullptr) return;
+    if (vmodel==NULL) return;
     if (!index.isValid()) return;
     if ((index.row()<0) || (index.row()>=index.model()->rowCount())) return;
 
@@ -40,11 +40,11 @@ void CVarDelegate::setEditorData(QWidget *editor, const QModelIndex &index) cons
     QLineEdit *le = qobject_cast<QLineEdit *>(editor);
     QComboBox *cb = qobject_cast<QComboBox *>(editor);
 
-    if ((index.column()==0) && (le!=nullptr))
+    if ((index.column()==0) && (le!=NULL))
         le->setText(wp.label);
-    else if ((index.column()==1) && (le!=nullptr))
+    else if ((index.column()==1) && (le!=NULL))
         le->setText(gSet->plcGetAddrName(wp));
-    else if ((index.column()==2) && (cb!=nullptr)) {
+    else if ((index.column()==2) && (cb!=NULL)) {
         cb->clear();
         QStringList sl = gSet->plcAvailableTypeNames();
         cb->addItems(sl);
@@ -54,22 +54,22 @@ void CVarDelegate::setEditorData(QWidget *editor, const QModelIndex &index) cons
 
 void CVarDelegate::setModelData(QWidget *editor, QAbstractItemModel *, const QModelIndex &index) const
 {
-    if (vmodel==nullptr) return;
+    if (vmodel==NULL) return;
     if (!index.isValid()) return;
     if ((index.row()<0) || (index.row()>=index.model()->rowCount())) return;
 
     QLineEdit *le = qobject_cast<QLineEdit *>(editor);
     QComboBox *cb = qobject_cast<QComboBox *>(editor);
 
-    if ((index.column()==0) && (le!=nullptr)) {
+    if ((index.column()==0) && (le!=NULL)) {
         vmodel->wp[index.row()].label=le->text();
         vmodel->syncPLC();
-    } else if ((index.column()==1) && (le!=nullptr)) {
+    } else if ((index.column()==1) && (le!=NULL)) {
         if (!gSet->plcParseAddr(le->text(),vmodel->wp[index.row()]))
             QMessageBox::warning(vmodel->mainWnd,trUtf8("PLC recorder error"),
                                  trUtf8("Unable to parse address. Possible syntax error."));
         vmodel->syncPLC();
-    } else if ((index.column()==2) && (cb!=nullptr)) {
+    } else if ((index.column()==2) && (cb!=NULL)) {
         if (!gSet->plcSetTypeForName(cb->currentText(),vmodel->wp[index.row()]))
             QMessageBox::warning(vmodel->mainWnd,trUtf8("PLC recorder error"),
                                  trUtf8("Unable to parse type. Possible syntax error."));

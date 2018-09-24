@@ -10,7 +10,7 @@ CTableView::CTableView(QWidget *parent) :
 
 void CTableView::selectAll()
 {
-    if (qobject_cast<QAbstractButton *>(sender())!=nullptr) {
+    if (qobject_cast<QAbstractButton *>(sender())!=NULL) {
         QPoint p = mapFromGlobal(QCursor::pos());
         p.setX(p.x()-verticalHeader()->width());
         p.setY(p.y()-horizontalHeader()->height());

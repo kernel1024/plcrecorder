@@ -25,7 +25,7 @@ public:
     CGraphForm* graph;
     CCSVHandler* csvHandler;
 
-    explicit MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(QWidget *parent = NULL);
     ~MainWindow();
     
 private:

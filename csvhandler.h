@@ -15,7 +15,7 @@ private:
     bool csvHasHeader;
 
 public:
-    explicit CCSVHandler(QObject *parent = nullptr);
+    explicit CCSVHandler(QObject *parent = 0);
 
     void addData(const CWPList& wp, const QDateTime& stm);
 
