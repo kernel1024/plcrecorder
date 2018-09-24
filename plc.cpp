@@ -375,6 +375,7 @@ void CPLC::plcClock()
                 if (dptr->recErrorsCount>dptr->tmMaxRecErrorCount) {
                     QString strMsg(daveStrerror(res));
                     plcStop();
+                    plcDisconnect();
                     emit plcError(trUtf8("Too many errors on active connection. Recording stopped. %1")
                                   .arg(strMsg),true);
                 }
