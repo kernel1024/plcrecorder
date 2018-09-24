@@ -63,4 +63,6 @@ private slots:
 
 Q_DECLARE_METATYPE(CGraphForm::CursorType)
 
+void initGraphFormData();
+
 #endif // GRAPHFORM_H

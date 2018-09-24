@@ -9,8 +9,14 @@
 #include "graphform.h"
 #include <QDebug>
 
-const QList<int> validArea({CWP::Inputs,CWP::Outputs,CWP::Merkers,CWP::DB,CWP::IDB});
-const double zoomIncrements = 0.2; // in percents of actual data range
+static QList<int> validArea;
+const static double zoomIncrements = 0.2; // in percents of actual data range
+
+void initGraphFormData()
+{
+    validArea.clear();
+    validArea << CWP::Inputs << CWP::Outputs << CWP::Merkers << CWP::DB << CWP::IDB;
+}
 
 CGraphForm::CGraphForm(QWidget *parent) :
     QWidget(parent),

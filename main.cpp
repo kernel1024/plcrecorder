@@ -1,5 +1,6 @@
 #include <QApplication>
 #include "mainwindow.h"
+#include "graphform.h"
 #include "plc.h"
 
 #ifdef LINUX
@@ -29,6 +30,8 @@ int main(int argc, char *argv[])
     qRegisterMetaType<CWPList>("CWPList");
     qRegisterMetaType<CPairing>("CPairing");
     qRegisterMetaType<CGraphForm::CursorType>("CGraphForm::CursorType");
+
+    initGraphFormData();
 
     QApplication a(argc, argv);
     MainWindow w;
