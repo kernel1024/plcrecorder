@@ -1,5 +1,11 @@
 #include <QSettings>
+
+#ifdef HAVE_QT5
 #include <QStandardPaths>
+#else
+#include <QDesktopServices>
+#endif
+
 #include "global.h"
 #include "plc.h"
 
@@ -415,10 +421,15 @@ bool CGlobal::plcIsPlottableType(const CWP &aWp)
 
 void CGlobal::loadSettings()
 {
+#ifdef HAVE_QT5
+    QString docs = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+#else
+    QString docs = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation);
+#endif
+
     QSettings settings("kernel1024", "plcrecorder");
     settings.beginGroup("Settings");
-    gSet->outputCSVDir = settings.value("outputCSVDir",
-                                        QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)).toString();
+    gSet->outputCSVDir = settings.value("outputCSVDir",docs).toString();
     gSet->outputFileTemplate = settings.value("outputFileTemplate",QString()).toString();
     gSet->tmTCPTimeout = settings.value("timeTCPTimeout",5000000).toInt();
     gSet->tmMaxRecErrorCount = settings.value("timeMaxRecErrorCount",50).toInt();

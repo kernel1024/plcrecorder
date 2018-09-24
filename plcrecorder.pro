@@ -4,11 +4,15 @@
 #
 #-------------------------------------------------
 
-QT       += core gui widgets printsupport
+QT       += core gui printsupport
 
 TARGET = plcrecorder
 TEMPLATE = app
 
+greaterThan(QT_MAJOR_VERSION, 4) {
+  QT += widgets
+  DEFINES += HAVE_QT5
+}
 
 DEFINES += DAVE_LITTLE_ENDIAN
 
@@ -47,7 +51,6 @@ RESOURCES += \
 
 CONFIG += warn_on \
     link_pkgconfig \
-    c++14
 
 unix {
     DEFINES += LINUX

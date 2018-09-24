@@ -20,7 +20,6 @@ public:
         ctLeft = 2,
         ctRight = 3
     };
-    Q_ENUM(CursorType)
 
     explicit CGraphForm(QWidget *parent = nullptr);
     ~CGraphForm();
@@ -61,5 +60,7 @@ private slots:
     void plotContextMenu(const QPoint &pos);
 
 };
+
+Q_DECLARE_METATYPE(CGraphForm::CursorType)
 
 #endif // GRAPHFORM_H

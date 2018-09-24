@@ -1,6 +1,10 @@
 #include <limits.h>
 #include <float.h>
 #include <QSharedPointer>
+#include <QMenu>
+#include <QMessageBox>
+#include <QBuffer>
+#include <QDesktopWidget>
 #include "ui_graphform.h"
 #include "graphform.h"
 #include <QDebug>
@@ -22,11 +26,11 @@ CGraphForm::CGraphForm(QWidget *parent) :
 
     ui->plot->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    connect(ui->plot,&QCustomPlot::mouseMove,this,&CGraphForm::plotMouseMove);
-    connect(ui->btnLoadCSV,&QPushButton::clicked,this,&CGraphForm::loadCSV);
-    connect(ui->btnExport,&QPushButton::clicked,this,&CGraphForm::exportGraph);
-    connect(ui->horizontalScrollBar,&QScrollBar::valueChanged,this,&CGraphForm::scrollBarMoved);
-    connect(ui->plot,&QCustomPlot::customContextMenuRequested,this,&CGraphForm::plotContextMenu);
+    connect(ui->plot,SIGNAL(mouseMove(QMouseEvent*)),this,SLOT(plotMouseMove(QMouseEvent*)));
+    connect(ui->btnLoadCSV,SIGNAL(clicked()),this,SLOT(loadCSV()));
+    connect(ui->btnExport,SIGNAL(clicked()),this,SLOT(exportGraph()));
+    connect(ui->horizontalScrollBar,SIGNAL(valueChanged(int)),this,SLOT(scrollBarMoved(int)));
+    connect(ui->plot,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(plotContextMenu(QPoint)));
 
     ui->splitter->setCollapsible(0,false);
     ui->splitter->setCollapsible(1,true);
@@ -363,7 +367,9 @@ void CGraphForm::plotRangeChanged(const QCPRange &newRange)
 
 void CGraphForm::plotMouseMove(QMouseEvent *event)
 {
-    QCPAxisRect *rect = ui->plot->axisRectAt(event->localPos());
+    QPointF pos(event->pos());
+
+    QCPAxisRect *rect = ui->plot->axisRectAt(pos);
     if (rect!=nullptr) {
 
         // create 'cursors' layer if needed
@@ -374,7 +380,7 @@ void CGraphForm::plotMouseMove(QMouseEvent *event)
             cursors = ui->plot->layer("cursor");
         }
 
-        double x = rect->axis(QCPAxis::atTop)->pixelToCoord(event->localPos().x());
+        double x = rect->axis(QCPAxis::atTop)->pixelToCoord(pos.x());
 
         // cursor type selection
         QCPItemStraightLine* cursor;
@@ -437,11 +443,11 @@ void CGraphForm::plotContextMenu(const QPoint &pos)
 
     QAction* acm;
     acm = cm.addAction(QIcon(":/zoom"),trUtf8("Zoom all"));
-    connect(acm,&QAction::triggered,this,&CGraphForm::zoomAll);
+    connect(acm,SIGNAL(triggered()),this,SLOT(zoomAll()));
     cm.addSeparator();
 
     acm = cm.addAction(QIcon(":/trash-empty"),trUtf8("Clear plot"));
-    connect(acm,&QAction::triggered,this,&CGraphForm::clearData);
+    connect(acm,SIGNAL(triggered()),this,SLOT(clearData()));
 
     QPoint p = pos;
     cm.exec(ui->plot->mapToGlobal(p));

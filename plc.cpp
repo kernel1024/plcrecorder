@@ -261,16 +261,9 @@ void CPLC::correctToThread()
     dptr->resClock->setInterval(120*60*1000); // 2 min for reset accumulated record errors
     dptr->infClock->setInterval(2000);
 
-    connect(dptr->mainClock,&QTimer::timeout,this,&CPLC::plcClock);
-    connect(dptr->resClock,&QTimer::timeout,[this](){
-        dptr->recErrorsCount = 0;
-    });
-    connect(dptr->infClock,&QTimer::timeout,[this](){
-        if (dptr->state==splcRecording)
-            emit plcScanTime(trUtf8("%1 ms").arg(dptr->updateInterval));
-        else
-            emit plcScanTime(trUtf8("- ms"));
-    });
+    connect(dptr->mainClock,SIGNAL(timeout()),this,SLOT(plcClock()));
+    connect(dptr->resClock,SIGNAL(timeout()),this,SLOT(resClock()));
+    connect(dptr->infClock,SIGNAL(timeout()),this,SLOT(infClock()));
 
     dptr->resClock->start();
     dptr->infClock->start();
@@ -392,6 +385,19 @@ void CPLC::plcClock()
     emit plcVariablesUpdatedConsistent(dptr->watchpoints,tms);
     emit plcVariablesUpdated();
     dptr->clockInterlock.unlock();
+}
+
+void CPLC::resClock()
+{
+    dptr->recErrorsCount = 0;
+}
+
+void CPLC::infClock()
+{
+    if (dptr->state==splcRecording)
+        emit plcScanTime(trUtf8("%1 ms").arg(dptr->updateInterval));
+    else
+        emit plcScanTime(trUtf8("- ms"));
 }
 
 CWP::CWP()

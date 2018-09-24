@@ -42,17 +42,17 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->statusBar->addPermanentWidget(cbVat);
     ui->statusBar->addPermanentWidget(lblState);
 
-    connect(ui->actionSettings,&QAction::triggered,this,&MainWindow::settingsDlg);
-    connect(ui->actionLoadConnection,&QAction::triggered,this,&MainWindow::loadConnection);
-    connect(ui->actionSaveConnection,&QAction::triggered,this,&MainWindow::saveConnection);
-    connect(ui->actionForceRotateCSV,&QAction::triggered,csvHandler,&CCSVHandler::rotateFile);
-    connect(ui->actionAbout,&QAction::triggered,this,&MainWindow::aboutMsg);
-    connect(ui->actionAboutQt,&QAction::triggered,this,&MainWindow::aboutQtMsg);
-    connect(ui->tableVariables,&CTableView:: ctxMenuRequested,this,&MainWindow::variablesCtxMenu);
+    connect(ui->actionSettings,SIGNAL(triggered()),this,SLOT(settingsDlg()));
+    connect(ui->actionLoadConnection,SIGNAL(triggered()),this,SLOT(loadConnection()));
+    connect(ui->actionSaveConnection,SIGNAL(triggered()),this,SLOT(saveConnection()));
+    connect(ui->actionForceRotateCSV,SIGNAL(triggered()),csvHandler,SLOT(rotateFile()));
+    connect(ui->actionAbout,SIGNAL(triggered()),this,SLOT(aboutMsg()));
+    connect(ui->actionAboutQt,SIGNAL(triggered()),this,SLOT(aboutQtMsg()));
+    connect(ui->tableVariables,SIGNAL(ctxMenuRequested(QPoint)),this,SLOT(variablesCtxMenu(QPoint)));
 
-    connect(cbVat,&QCheckBox::clicked,this,&MainWindow::vatControl);
-    connect(cbRec,&QCheckBox::clicked,this,&MainWindow::csvControl);
-    connect(cbPlot,&QCheckBox::clicked,this,&MainWindow::plotControl);
+    connect(cbVat,SIGNAL(clicked()),this,SLOT(vatControl()));
+    connect(cbRec,SIGNAL(clicked()),this,SLOT(csvControl()));
+    connect(cbPlot,SIGNAL(clicked()),this,SLOT(plotControl()));
 
     plc = new CPLC();
     plcThread = new QThread();
@@ -80,46 +80,44 @@ MainWindow::MainWindow(QWidget *parent) :
     plc->moveToThread(plcThread);
     plcThread->start();
 
-    connect(this,&MainWindow::plcCorrectToThread,plc,&CPLC::correctToThread,Qt::QueuedConnection);
+    connect(this,SIGNAL(plcCorrectToThread()),plc,SLOT(correctToThread()),Qt::QueuedConnection);
     emit plcCorrectToThread();
 
     graph = new CGraphForm(this);
     graph->setWindowFlags(graph->windowFlags() | Qt::Window);
     graph->hide();
-    connect(ui->actionShowPlot,&QAction::triggered,graph,&CGraphForm::show);
+    connect(ui->actionShowPlot,SIGNAL(triggered()),graph,SLOT(show()));
 
-    connect(ui->btnConnect,&QPushButton::clicked,this,&MainWindow::ctlAggregatedStartForce);
-    connect(ui->btnDisconnect,&QPushButton::clicked,this,&MainWindow::ctlStop);
-    connect(ui->editAcqInterval,SIGNAL(valueChanged(int)),plc,SLOT(plcSetAcqInterval(int)),Qt::QueuedConnection);
+    connect(ui->btnConnect,SIGNAL(clicked()),this,SLOT(ctlAggregatedStartForce()));
+    connect(ui->btnDisconnect,SIGNAL(clicked()),this,SLOT(ctlStop()));
+    connect(ui->editAcqInterval,SIGNAL(valueChanged(int)),
+            plc,SLOT(plcSetAcqInterval(int)),Qt::QueuedConnection);
 
-    connect(plc,&CPLC::plcError,this,&MainWindow::plcErrorMsg,Qt::QueuedConnection);
-    connect(plc,&CPLC::plcConnectFailed,this,&MainWindow::plcStartFailed,Qt::QueuedConnection);
-    connect(plc,&CPLC::plcStartFailed,this,&MainWindow::plcStartFailed,Qt::QueuedConnection);
-    connect(plc,&CPLC::plcOnConnect,this,&MainWindow::plcConnected,Qt::QueuedConnection);
-    connect(plc,&CPLC::plcOnDisconnect,this,&MainWindow::plcDisconnected,Qt::QueuedConnection);
-    connect(plc,&CPLC::plcOnStart,this,&MainWindow::plcStarted,Qt::QueuedConnection);
-    connect(plc,&CPLC::plcOnStop,this,&MainWindow::plcStopped,Qt::QueuedConnection);
-    connect(plc,&CPLC::plcVariablesUpdatedConsistent,
-            this,&MainWindow::plcVariablesUpdatedConsistent,Qt::QueuedConnection);
-    connect(plc,&CPLC::plcScanTime,ui->lblActualAcqInterval,&QLabel::setText,Qt::QueuedConnection);
+    connect(plc,SIGNAL(plcError(QString,bool)),this,SLOT(plcErrorMsg(QString,bool)),Qt::QueuedConnection);
+    connect(plc,SIGNAL(plcConnectFailed()),this,SLOT(plcStartFailed()),Qt::QueuedConnection);
+    connect(plc,SIGNAL(plcStartFailed()),this,SLOT(plcStartFailed()),Qt::QueuedConnection);
+    connect(plc,SIGNAL(plcOnConnect()),this,SLOT(plcConnected()),Qt::QueuedConnection);
+    connect(plc,SIGNAL(plcOnDisconnect()),this,SLOT(plcDisconnected()),Qt::QueuedConnection);
+    connect(plc,SIGNAL(plcOnStart()),this,SLOT(plcStarted()),Qt::QueuedConnection);
+    connect(plc,SIGNAL(plcOnStop()),this,SLOT(plcStopped()),Qt::QueuedConnection);
+    connect(plc,SIGNAL(plcVariablesUpdatedConsistent(CWPList,QDateTime)),
+            this,SLOT(plcVariablesUpdatedConsistent(CWPList,QDateTime)),Qt::QueuedConnection);
+    connect(plc,SIGNAL(plcScanTime(QString)),ui->lblActualAcqInterval,SLOT(setText(QString)),Qt::QueuedConnection);
 
-    connect(ui->tableVariables,&CTableView::customContextMenuRequested,this,&MainWindow::variablesCtxMenu);
-    connect(graph,&CGraphForm::logMessage,this,&MainWindow::appendLog);
-    connect(graph,&CGraphForm::stopGraph,this,&MainWindow::plotStop);
+    connect(ui->tableVariables,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(variablesCtxMenu(QPoint)));
+    connect(graph,SIGNAL(logMessage(QString)),this,SLOT(appendLog(QString)));
+    connect(graph,SIGNAL(stopGraph()),this,SLOT(plotStop()));
 
-    connect(vtmodel,&CVarModel::syncPLCtoModel,plc,&CPLC::plcSetWatchpoints);
-    connect(this,&MainWindow::plcSetAddress,plc,&CPLC::plcSetAddress);
-    connect(this,&MainWindow::plcSetRetryParams,plc,&CPLC::plcSetRetryParams);
-    connect(this,&MainWindow::plcConnect,plc,&CPLC::plcConnect);
-    connect(this,&MainWindow::plcStart,plc,&CPLC::plcStart);
-    connect(this,&MainWindow::plcDisconnect,plc,&CPLC::plcDisconnect);
+    connect(vtmodel,SIGNAL(syncPLCtoModel(CWPList)),plc,SLOT(plcSetWatchpoints(CWPList)));
+    connect(this,SIGNAL(plcSetAddress(QString,int,int,int)),plc,SLOT(plcSetAddress(QString,int,int,int)));
+    connect(this,SIGNAL(plcSetRetryParams(int,int,int)),plc,SLOT(plcSetRetryParams(int,int,int)));
+    connect(this,SIGNAL(plcConnect()),plc,SLOT(plcConnect()));
+    connect(this,SIGNAL(plcStart()),plc,SLOT(plcStart()));
+    connect(this,SIGNAL(plcDisconnect()),plc,SLOT(plcDisconnect()));
 
     QTimer* syncTimer = new QTimer(this);
     syncTimer->setInterval(60000);
-    connect(syncTimer,&QTimer::timeout,[this](){
-        if (cbRec->isChecked())
-            emit csvSync();
-    });
+    connect(syncTimer,SIGNAL(timeout()),this,SLOT(syncTimer()));
     syncTimer->start();
 
     bool needToStart = false;
@@ -134,20 +132,13 @@ MainWindow::MainWindow(QWidget *parent) :
     if (needToStart && (vtmodel->getCWPCount()>0)) {
         appendLog(trUtf8("Automatic reconnect after 10 sec from command prompt."));
         autoOnLogging = true;
-        QTimer::singleShot(10*1000,this,&MainWindow::ctlAggregatedStartForce);
+        QTimer::singleShot(10*1000,this,SLOT(ctlAggregatedStartForce()));
     }
 
-    connect(csvHandler,&CCSVHandler::errorMessage,[this](const QString& message){
-        if (!gSet->suppressMsgBox)
-            QMessageBox::critical(this,trUtf8("PLC recorder error"),message);
-    });
-    connect(csvHandler,&CCSVHandler::recordingStopped,[this](){
-        cbRec->setChecked(false);
-        cbRec->setStyleSheet(QString());
-        ui->actionForceRotateCSV->setEnabled(false);
-    });
-    connect(csvHandler,&CCSVHandler::appendLog,this,&MainWindow::appendLog);
-    connect(this,&MainWindow::csvSync,csvHandler,&CCSVHandler::timerSync);
+    connect(csvHandler,SIGNAL(errorMessage(QString)),this,SLOT(csvError(QString)));
+    connect(csvHandler,SIGNAL(recordingStopped()),this,SLOT(recordingStopped()));
+    connect(csvHandler,SIGNAL(appendLog(QString)),this,SLOT(appendLog(QString)));
+    connect(this,SIGNAL(csvSync()),csvHandler,SLOT(timerSync()));
 
     gSet->loadSettings();
 }
@@ -164,12 +155,31 @@ void MainWindow::appendLog(const QString &msg)
                                  arg(msg));
 }
 
+void MainWindow::syncTimer()
+{
+    if (cbRec->isChecked())
+        emit csvSync();
+}
+
+void MainWindow::csvError(const QString &msg)
+{
+    if (!gSet->suppressMsgBox)
+        QMessageBox::critical(this,trUtf8("PLC recorder error"),msg);
+}
+
+void MainWindow::recordingStopped()
+{
+    cbRec->setChecked(false);
+    cbRec->setStyleSheet(QString());
+    ui->actionForceRotateCSV->setEnabled(false);
+}
+
 void MainWindow::loadConnectionFromFile(const QString &fname)
 {
     QFile f(fname);
     if (f.open(QIODevice::ReadOnly)) {
         QDataStream in(&f);
-        in.setVersion(QDataStream::Qt_5_2);
+        in.setVersion(QDataStream::Qt_4_8);
         QString aip;
         int acqInt,arack,aslot, v;
         in >> v;
@@ -311,7 +321,7 @@ void MainWindow::plcStartFailed()
         if (gSet->tmTotalRetryCount==0)
             agcRestartCounter = 0;
         if (agcRestartCounter<=gSet->tmTotalRetryCount) {
-            QTimer::singleShot(gSet->tmWaitReconnect*1000,this,&MainWindow::ctlAggregatedStart);
+            QTimer::singleShot(gSet->tmWaitReconnect*1000,this,SLOT(ctlAggregatedStart()));
         } else
             ctlStop();
     }
@@ -379,34 +389,43 @@ void MainWindow::variablesCtxMenu(QPoint pos)
 
     QAction* acm;
     acm = cm.addAction(QIcon(":/new"),trUtf8("Add variable"));
-    connect(acm,&QAction::triggered,this,[this](){
-        vtmodel->insertRow(vtmodel->getCWPCount());
-    });
+    connect(acm,SIGNAL(triggered()),this,SLOT(ctxNew()));
 
     acm = cm.addAction(QIcon(":/delete"),trUtf8("Remove variable"));
-    connect(acm,&QAction::triggered,this,[this](){
-        QModelIndexList mi = ui->tableVariables->selectionModel()->selectedIndexes();
-        QList<int> rows;
-        for (int i=0;i<mi.count();i++) {
-            if (!mi.at(i).isValid()) continue;
-            rows << mi.at(i).row();
-        }
-        if (!rows.isEmpty())
-            vtmodel->removeMultipleRows(rows);
-    });
+    connect(acm,SIGNAL(triggered()),this,SLOT(ctxRemove()));
     acm->setEnabled(!(ui->tableVariables->selectionModel()->selectedIndexes().isEmpty()));
 
     cm.addSeparator();
 
     acm = cm.addAction(trUtf8("Remove all"));
-    connect(acm,&QAction::triggered,this,[this](){
-        vtmodel->removeRows(0,vtmodel->getCWPCount());
-    });
+    connect(acm,SIGNAL(triggered()),this,SLOT(ctxRemoveAll()));
 
     QPoint p = pos;
     p.setY(p.y()+ui->tableVariables->horizontalHeader()->height());
     p.setX(p.x()+ui->tableVariables->verticalHeader()->width());
     cm.exec(ui->tableVariables->mapToGlobal(p));
+}
+
+void MainWindow::ctxNew()
+{
+    vtmodel->insertRow(vtmodel->getCWPCount());
+}
+
+void MainWindow::ctxRemove()
+{
+    QModelIndexList mi = ui->tableVariables->selectionModel()->selectedIndexes();
+    QList<int> rows;
+    for (int i=0;i<mi.count();i++) {
+        if (!mi.at(i).isValid()) continue;
+        rows << mi.at(i).row();
+    }
+    if (!rows.isEmpty())
+        vtmodel->removeMultipleRows(rows);
+}
+
+void MainWindow::ctxRemoveAll()
+{
+    vtmodel->removeRows(0,vtmodel->getCWPCount());
 }
 
 void MainWindow::settingsDlg()
@@ -451,7 +470,7 @@ void MainWindow::saveConnection()
     QFile f(s);
     if (f.open(QIODevice::WriteOnly)) {
         QDataStream out(&f);
-        out.setVersion(QDataStream::Qt_5_2);
+        out.setVersion(QDataStream::Qt_4_8);
         int v = PLR_VERSION;
         out << v << ui->editIP->text() << ui->editRack->value() <<
                ui->editSlot->value() << ui->editAcqInterval->value();

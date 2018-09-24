@@ -18,7 +18,6 @@ public:
     explicit CCSVHandler(QObject *parent = nullptr);
 
     void addData(const CWPList& wp, const QDateTime& stm);
-    bool rotateFile();
 
 signals:
     void appendLog(const QString& message);
@@ -26,6 +25,7 @@ signals:
     void recordingStopped();
 
 public slots:
+    bool rotateFile();
     void timerSync();
     void stopClose();
 };

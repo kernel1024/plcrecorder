@@ -83,6 +83,14 @@ public slots:
 
     void appendLog(const QString& msg);
 
+    void syncTimer();
+    void csvError(const QString& msg);
+    void recordingStopped();
+
+    void ctxNew();
+    void ctxRemove();
+    void ctxRemoveAll();
+
 signals:
     void plcSetAddress(const QString& Ip, int Rack, int Slot, int Timeout);
     void plcSetRetryParams(int maxErrorCnt, int maxRetryCnt, int waitReconnect);

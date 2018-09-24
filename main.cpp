@@ -28,6 +28,7 @@ int main(int argc, char *argv[])
     qRegisterMetaType<CWP>("CWP");
     qRegisterMetaType<CWPList>("CWPList");
     qRegisterMetaType<CPairing>("CPairing");
+    qRegisterMetaType<CGraphForm::CursorType>("CGraphForm::CursorType");
 
     QApplication a(argc, argv);
     MainWindow w;

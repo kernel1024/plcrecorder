@@ -124,6 +124,8 @@ public slots:
 
 private slots:
     void plcClock();
+    void resClock();
+    void infClock();
     
 };
 

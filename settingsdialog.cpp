@@ -8,7 +8,7 @@ CSettingsDialog::CSettingsDialog(QWidget *parent) :
     ui(new Ui::CSettingsDialog)
 {
     ui->setupUi(this);
-    connect(ui->btnCSVDir,&QPushButton::clicked,this,&CSettingsDialog::selectDirDlg);
+    connect(ui->btnCSVDir,SIGNAL(clicked()),this,SLOT(selectDirDlg()));
 }
 
 CSettingsDialog::~CSettingsDialog()
